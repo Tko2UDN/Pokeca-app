@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポケカ対戦シミュレーター</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0b0b12; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow-x: hidden; padding: 6px; font-size: 14px; width: 100vw; }
+
+    /* 折りたたみ用アコーディオン */
+    details#setup-accordion { background: #1a1a28; border: 1px solid #333; border-radius: 8px; margin-bottom: 8px; padding: 6px 10px; }
+    details#setup-accordion summary { font-weight: bold; color: #f39c12; cursor: pointer; font-size: 13px; outline: none; user-select: none; }
+    details#setup-accordion summary:hover { color: #f1c40f; }
+
+    #setup-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; width: 100%; }
+    .setup-box { background: #12121c; padding: 10px; border-radius: 8px; border: 1px solid #333; flex: 1; min-width: 280px; }
+    textarea { width: 100%; height: 45px; background: #0f0f18; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 6px; font-size: 12px; }
+    input[type="text"], select { background: #0f0f18; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 6px; font-size: 12px; width: 100%; }
+    
+    button { background: #27ae60; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; margin-top: 2px; }
+    button:hover { background: #219150; }
+    .btn-action { background: #2980b9; }
+    .btn-action:hover { background: #3498db; }
+    .btn-special { background: #9b59b6; }
+    .btn-special:hover { background: #8e44ad; }
+    .btn-danger { background: #e74c3c; font-size: 10px; padding: 2px 5px; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-coin { background: #f39c12; color: #111; font-weight: bold; }
+    .btn-coin:hover { background: #d35400; color: #fff; }
+    .btn-switch { background: #e67e22; font-size: 10px; padding: 2px 4px; margin-bottom: 2px; }
+    .btn-host { background: #8e44ad; }
+    .btn-confirm { background: #f39c12; color: #111; font-weight: bold; font-size: 12px; padding: 6px 14px; }
+    
+    #status-log { font-size: 12px; color: #00ffcc; margin-top: 4px; font-weight: bold; }
+    #online-status { font-size: 12px; color: #f1c40f; margin-top: 4px; font-weight: bold; word-break: break-all; }
+
+    #action-log-container { display: none; background: #12121c; border: 1px solid #333; border-radius: 6px; padding: 6px; margin-bottom: 8px; max-height: 120px; overflow-y: auto; font-size: 11px; color: #aaa; font-family: monospace; }
+    #action-log-container.show { display: block; }
+    .log-entry { margin-bottom: 2px; }
+    .log-entry span { color: #f39c12; font-weight: bold; }
+
+    #mobile-view-tabs { display: flex; gap: 6px; margin-bottom: 8px; width: 100%; justify-content: center; align-items: center; flex-wrap: wrap; }
+    .tab-btn { flex: 1; max-width: 140px; padding: 8px 4px; font-size: 12px; font-weight: bold; background: #2c2c3e; border: 1px solid #444; color: #aaa; border-radius: 6px; }
+    .tab-btn.active { background: #f39c12; color: #000; border-color: #f1c40f; }
+
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-content { display: none; position: absolute; right: 0; background-color: #1e1e2e; min-width: 280px; box-shadow: 0px 8px 20px rgba(0,0,0,0.8); z-index: 100; border: 1.5px solid #666; border-radius: 8px; overflow: hidden; }
+    .dropdown-content a { color: #fff; padding: 12px 16px; text-decoration: none; display: block; font-size: 13px; font-weight: bold; border-bottom: 1px solid #333; cursor: pointer; transition: background 0.2s; }
+    .dropdown-content a:hover { background-color: #3d3d5c; color: #f1c40f; }
+    .dropdown.show .dropdown-content { display: block; }
+
+    #board { display: flex; flex-direction: column; gap: 8px; width: 100%; margin: 0 auto; }
+    .stadium-zone-wrapper { display: flex; justify-content: center; align-items: center; padding: 4px 0; border-top: 2px dashed #444; border-bottom: 2px dashed #444; }
+
+    .field { background: #14141f; border-radius: 10px; padding: 8px; border: 1px solid #333; display: flex; flex-direction: column; gap: 6px; position: relative; width: 100%; }
+    .field-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .field-title { font-size: 14px; font-weight: bold; color: #f39c12; }
+    
+    /* ベンチを広くするためのグリッド比率調整 (ベンチ列を拡張) */
+    .field-grid { display: grid; grid-template-columns: 75px 1fr 100px 95px; gap: 6px; align-items: start; width: 100%; }
+    
+    .zone { background: rgba(255,255,255,0.03); border: 1.5px dashed #444; border-radius: 8px; padding: 4px; min-height: 155px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; position: relative; overflow-y: auto; }
+    .zone-title { position: absolute; top: 2px; left: 4px; font-size: 9px; color: rgba(255,255,255,0.7); pointer-events: none; font-weight: bold; z-index: 5; }
+
+    .side-zone { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 2px; min-height: 310px; align-items: center; }
+    .side-zone .card-frame { width: 62px !important; height: 85px !important; margin-top: -55px; }
+    .side-zone .card-frame:first-of-type { margin-top: 24px; }
+
+    .main-battle-bench { grid-column: 2; display: flex; flex-direction: column; gap: 8px; }
+    .deck-trash-zone { grid-column: 3; display: flex; flex-direction: column; gap: 8px; }
+    
+    /* 特殊処理場の重ね（スタック）＆スッキリ配置化 */
+    .special-zone { 
+      grid-column: 4; 
+      border: 1.5px dashed #9b59b6 !important; 
+      background: rgba(155, 89, 182, 0.1) !important; 
+      min-height: 310px; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: flex-start; 
+      padding-top: 26px; 
+      position: relative; 
+    }
+
+    .battle-zone { 
+      min-height: 185px; 
+      display: flex !important; 
+      flex-direction: row !important; 
+      align-items: center !important; 
+      justify-content: center !important; 
+      background: rgba(46, 204, 113, 0.05); 
+      border-color: rgba(46, 204, 113, 0.4); 
+      padding-top: 26px; 
+      position: relative; 
+      overflow-x: auto !important;
+    }
+    
+    .bench-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
+    .bench-container.expand-8 { grid-template-columns: repeat(8, 1fr); }
+    .bench-slot { min-height: 175px; background: rgba(52, 152, 219, 0.05); border: 1.5px dashed rgba(52, 152, 219, 0.3); border-radius: 8px; padding: 4px; padding-top: 22px; position: relative; display: flex; flex-direction: column; align-items: center; }
+    
+    .stack-zone { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+    .stack-count { font-size: 12px; font-weight: bold; color: #ffcc00; margin-top: 4px; }
+
+    .hand-zone { background: rgba(155, 89, 182, 0.08); border: 1.5px solid rgba(155, 89, 182, 0.4); border-radius: 8px; padding: 8px; min-height: 155px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; position: relative; width: 100%; }
+
+    @media (min-aspect-ratio: 1/1) and (min-width: 900px) {
+      #board { flex-direction: row; align-items: stretch; }
+      .field { flex: 1; }
+      .stadium-zone-wrapper { border-top: none; border-bottom: none; border-left: 2px dashed #444; border-right: 2px dashed #444; padding: 0 8px; width: 110px; flex-shrink: 0; }
+    }
+
+    .slot-dmg-ctrl {
+      position: absolute; top: 2px; right: 2px; z-index: 10;
+      display: flex; gap: 2px; align-items: center; background: rgba(0,0,0,0.75); padding: 2px 4px; border-radius: 4px; border: 1px solid #555;
+    }
+    .slot-dmg-val { font-size: 11px; font-weight: bold; color: #ff4444; min-width: 24px; text-align: center; }
+    .slot-dmg-btn { font-size: 9px; padding: 1px 3px; border-radius: 2px; background: #333; color: #fff; border: 1px solid #666; cursor: pointer; }
+    .slot-dmg-btn:hover { background: #f39c12; color: #000; }
+
+    .card-frame {
+      width: 92px; height: 128px; border-radius: 6px; padding: 5px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.7); border: 2px solid #555; background: #222230; color: #fff; font-size: 11px;
+      cursor: grab; user-select: none; position: relative; flex-shrink: 0; transition: transform 0.2s, margin 0.2s;
+      overflow: hidden !important;
+    }
+
+    .card-frame.battle-card {
+      width: 110px !important;
+      height: 152px !important;
+      border-width: 2.5px !important;
+    }
+
+    .card-frame:active { cursor: grabbing; }
+    .card-frame.selected, .zoom-card-large.selected-peek { border-color: #f39c12 !important; box-shadow: 0 0 16px #f39c12; transform: scale(1.02); z-index: 20; }
+    .card-frame.multi-selected { border-color: #f39c12 !important; box-shadow: 0 0 16px #f39c12; transform: scale(1.05); z-index: 20; }
+    .card-frame.multi-selected::after { content: "✓"; position: absolute; top: 2px; left: 2px; background: #f39c12; color: #000; font-weight: bold; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+
+    .card-frame.rotated-90 { transform: rotate(90deg); margin: 0 12px; }
+
+    /* ベンチ・特殊ゾーンの縦重ね */
+    .bench-slot .stacked-card, .special-zone .stacked-card { margin-top: -95px !important; position: relative; }
+    .bench-slot .stacked-card:first-child, .special-zone .stacked-card:first-child { margin-top: 0 !important; }
+
+    .battle-zone .stacked-card { 
+      margin-left: -75px !important; 
+      margin-top: 0 !important; 
+      position: relative; 
+    }
+    .battle-zone .stacked-card:first-child { margin-left: 0 !important; }
+
+    /* カード種別・属性別CSSスタイリング */
+    .element-草 { border-color: #27ae60; background: linear-gradient(135deg, #1e8449, #0e3e1b); color: #fff; }
+    .element-炎 { border-color: #e74c3c; background: linear-gradient(135deg, #c0392b, #4a130e); color: #fff; }
+    .element-水 { border-color: #3498db; background: linear-gradient(135deg, #2980b9, #0e2f44); color: #fff; }
+    .element-雷 { border-color: #f1c40f; background: linear-gradient(135deg, #d4ac0d, #4a3c04); color: #fff; }
+    .element-超 { border-color: #9b59b6; background: linear-gradient(135deg, #8e44ad, #2f0e3d); color: #fff; }
+    .element-闘 { border-color: #e67e22; background: linear-gradient(135deg, #d35400, #442407); color: #fff; }
+    .element-悪 { border-color: #34495e; background: linear-gradient(135deg, #2c3e50, #0b1015); color: #fff; }
+    .element-鋼 { border-color: #bdc3c7; background: linear-gradient(135deg, #95a5a6, #2c3e50); color: #fff; }
+    .element-ドラゴン, .element-竜 { border-color: #16a085; background: linear-gradient(135deg, #0b5345, #117864, #b7950b); color: #fff; }
+    .element-無, .element-無色 { border-color: #d5dbdb; background: linear-gradient(135deg, #eaeded, #abb2b9); color: #111; }
+    .element-無 .card-desc-text, .element-無色 .card-desc-text { color: #222; background: rgba(255,255,255,0.5); }
+
+    .type-グッズ { background: #12141d !important; border: 3px double #00d2ff !important; color: #fff; }
+    .type-ポケモンのどうぐ { background: #12141d !important; border: 3px double #ff9f43 !important; color: #fff; }
+    .type-サポート { background: #12141d !important; border: 3px double #ff5252 !important; color: #fff; }
+    .type-スタジアム { background: #12141d !important; border: 3px double #10ac84 !important; color: #fff; }
+
+    .type-エネルギー { border-color: #555; font-weight: bold; color: #fff !important; }
+    .type-エネルギー.energy-草 { background: #27ae60 !important; }
+    .type-エネルギー.energy-炎 { background: #e74c3c !important; }
+    .type-エネルギー.energy-水 { background: #2980b9 !important; }
+    .type-エネルギー.energy-雷 { background: #f1c40f !important; color: #000 !important; }
+    .type-エネルギー.energy-超 { background: #8e44ad !important; }
+    .type-エネルギー.energy-闘 { background: #e67e22 !important; }
+    .type-エネルギー.energy-悪 { background: #2c3e50 !important; }
+    .type-エネルギー.energy-鋼 { background: #95a5a6 !important; color: #000 !important; }
+
+    .type-エネルギー.energy-特殊, .type-エネルギー.special-energy { 
+      background: #f4f6f7 !important; 
+      color: #111 !important; 
+      border: 2px solid #bdc3c7 !important; 
+    }
+    .type-エネルギー.special-energy .card-name, .type-エネルギー.special-energy .card-desc-text { color: #111 !important; }
+
+    .zoom-btn { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid #888; cursor: pointer; z-index: 15; }
+    .zoom-btn:hover { background: #f39c12; color: #000; }
+
+    .card-back {
+      background: #111 url('https://assets.pokemon.com/assets/cms2/img/cards/web/card_back.png') center/cover no-repeat !important;
+      border-color: #3b5998 !important; border-radius: 6px;
+    }
+
+    .ability-used-badge { position: absolute; top: -6px; left: -6px; background: #27ae60; color: #fff; font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 4px; border: 1px solid #fff; z-index: 12; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    
+    .status-condition-badge { position: absolute; top: -6px; left: 30px; color: #fff; font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 4px; border: 1px solid #fff; z-index: 12; box-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+    .status-condition-badge.どく { background: linear-gradient(135deg, #8e44ad, #5b2c6f); }
+    .status-condition-badge.やけど { background: linear-gradient(135deg, #e67e22, #d35400); }
+    .status-condition-badge.マヒ, .status-condition-badge.ねむり, .status-condition-badge.こんらん { background: linear-gradient(135deg, #f1c40f, #b7950b); color: #000; }
+
+    .damage-badge { position: absolute; top: -6px; right: -6px; background: #e74c3c; color: #fff; font-weight: bold; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 11px; border: 1.5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 10; }
+    .damage-badge.fainted { background: #8e44ad !important; }
+
+    .card-header-line { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 2px; }
+    .card-name { font-weight: bold; font-size: 10px; line-height: 1.1; word-break: break-all; flex: 1; margin-right: 2px; overflow: hidden; }
+    
+    .card-skills-area { font-size: 9px; line-height: 1.2; margin-top: 4px; display: flex; flex-direction: column; gap: 2px; width: 100%; }
+    .skill-item { background: rgba(0,0,0,0.25); padding: 2px 4px; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; overflow: hidden; }
+    .skill-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; width: 100%; }
+
+    .card-desc-text { font-size: 8px; line-height: 1.15; color: #eee; background: rgba(0,0,0,0.3); padding: 3px; border-radius: 3px; margin-top: 4px; max-height: 52px; overflow: hidden; word-break: break-all; }
+    .battle-card .card-desc-text { font-size: 9px; max-height: 65px; }
+
+    .status-ctrl { display: flex; gap: 2px; margin-top: 2px; justify-content: center; flex-wrap: wrap; }
+    .status-btn { font-size: 8px; padding: 1px 3px; border-radius: 2px; background: #333; color: #fff; border: 1px solid #666; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: #1a1a28; width: 95%; max-width: 1000px; height: 85vh; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; border: 1px solid #555; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
+    .modal-body { flex: 1; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; background: #0f0f18; border-radius: 6px; }
+    .close-btn { background: #e74c3c; padding: 6px 12px; }
+
+    #zoom-modal-content {
+      background: #1a1a28; width: 92vw; max-width: 480px; border-radius: 12px; padding: 16px; border: 2px solid #f39c12; box-shadow: 0 0 30px rgba(243, 156, 18, 0.6); display: flex; flex-direction: column; gap: 10px; max-height: 90vh; overflow-y: auto;
+    }
+    .zoom-card-large {
+      width: 100%; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; border: 2px solid #a0a0a0; font-size: 13px; word-break: break-all; cursor: pointer;
+    }
+    .detail-section { background: rgba(0,0,0,0.4); padding: 8px; border-radius: 6px; font-size: 12px; line-height: 1.4; border-left: 3px solid #f39c12; }
+    .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 11px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; }
+    .detail-item { display: flex; flex-direction: column; }
+    .detail-label { color: #aaa; font-size: 10px; font-weight: bold; }
+    .detail-val { color: #fff; font-weight: bold; }
+
+    .top-peek-btn-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; justify-content: center; }
+  </style>
+</head>
+<body>
+
+  <!-- 折りたたみ（開閉）対応のセットアップエリア -->
+  <details id="setup-accordion" open>
+    <summary>⚙️ デッキ設定・対戦ルーム情報（タップで開閉）</summary>
+    <div id="setup-container">
+      <div class="setup-box">
+        <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #2ecc71;">① 登録済みデッキから選択</div>
+        <select id="saved-deck-select" onchange="onSelectSavedDeck()">
+          <option value="">-- デッキを読み込み中... --</option>
+        </select>
+
+        <div style="font-size: 11px; font-weight: bold; margin: 6px 0 4px 0; color: #aaa;">② または直接テキストを貼り付け</div>
+        <textarea id="deck-text" placeholder="公式デッキテキストを貼り付け..."></textarea>
+        
+        <div>
+          <button onclick="setupGame()">自分のデッキを読み込む</button>
+          <div id="status-log">カードデータを背景で読み込んでいます...</div>
+        </div>
+      </div>
+
+      <div class="setup-box">
+        <div style="font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #f1c40f;">オンライン対戦ルーム</div>
+        <button class="btn-host" onclick="createRoom()">部屋を作る (ホスト)</button>
+        <div style="margin-top: 6px;">
+          <input type="text" id="room-id-input" placeholder="部屋IDを入力">
+          <button class="btn-action" onclick="joinRoom()">部屋に参加する</button>
+        </div>
+        <div id="online-status">オフライン (一人まわしモード)</div>
+      </div>
+    </div>
+  </details>
+
+  <div id="action-log-container">
+    <div class="log-entry">--- 対戦アクションログ ---</div>
+  </div>
+
+  <div id="mobile-view-tabs">
+    <button class="tab-btn active" id="tab-player" onclick="switchMobileView('player')">📱 自分の場</button>
+    <button class="tab-btn" id="tab-opp" onclick="switchMobileView('opp')">📱 相手の場</button>
+    <button class="tab-btn" id="tab-both" onclick="switchMobileView('both')">🖥️ 全体表示</button>
+    
+    <div class="dropdown" id="other-tools-dropdown">
+      <button class="btn-special" style="padding: 8px 12px; font-size: 12px; background: #34495e;" onclick="toggleDropdown(event, 'other-tools-dropdown')">その他機能 ▾</button>
+      <div class="dropdown-content">
+        <a onclick="tossCoin()">🪙 コイントスをする</a>
+        <a onclick="toggleActionLog()">📜 対戦履歴（ログ）を表示／非表示</a>
+        <a onclick="resetGameField()" style="color: #ff6b6b;">🔄 盤面を完全リセット</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="board">
+    <div class="field" id="opp-field">
+      <div class="field-header">
+        <div class="field-title" id="opp-title">相手の場</div>
+      </div>
+      <div class="zone hand-zone" id="opp-hand"><span class="zone-title">手札 (相手)</span></div>
+      
+      <div class="field-grid">
+        <div class="zone side-zone" id="opp-side"><span class="zone-title">サイド (6)</span></div>
+        <div class="main-battle-bench">
+          <div class="bench-container" id="opp-bench-container"></div>
+          <div class="zone battle-zone" id="opp-battle"><span class="zone-title">バトル場</span></div>
+        </div>
+        <div class="deck-trash-zone">
+          <div class="zone stack-zone" id="opp-deck">
+            <span class="zone-title">山札</span>
+            <div class="stack-count" id="opp-deck-count">0枚</div>
+            <button class="btn-action" onclick="openModal('opp-deck')">展開</button>
+          </div>
+          <div class="zone stack-zone" id="opp-trash">
+            <span class="zone-title">トラッシュ</span>
+            <div class="stack-count" id="opp-trash-count">0枚</div>
+            <button class="btn-action" onclick="openModal('opp-trash')">展開</button>
+          </div>
+        </div>
+        <!-- 相手の特殊処理場 (重ね＆展開ボタン設置) -->
+        <div class="zone special-zone" id="opp-special">
+          <span class="zone-title">特殊処理場</span>
+          <button class="btn-action" style="position: absolute; top: 2px; right: 2px; font-size: 9px; padding: 1px 4px; z-index: 10;" onclick="openModal('opp-special')">展開</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stadium-zone-wrapper" id="stadium-wrapper">
+      <div class="zone" id="stadium-zone" style="width: 105px; min-height: 155px; justify-content: center; align-items: center;">
+        <span class="zone-title">スタジアム</span>
+      </div>
+    </div>
+
+    <div class="field" id="player-field">
+      <div class="field-header">
+        <div class="field-title" id="player-title">自分の場</div>
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+          <button class="btn-action" onclick="drawCard()">1枚引く</button>
+          <button class="btn-action" onclick="shuffleMyDeck()">山札シャッフル</button>
+          <button class="btn-special" onclick="returnHandToDeck()">手札全戻し＆シャッフル</button>
+          
+          <div class="dropdown" id="special-dropdown">
+            <button class="btn-special" style="padding: 6px 14px; font-size: 12px; background: #8e44ad;" onclick="toggleDropdown(event, 'special-dropdown')">特殊操作 ▾</button>
+            <div class="dropdown-content">
+              <a onclick="peekDeckTop()">👁️ 山札の上から1枚見る</a>
+              <a onclick="sendAllHandToSpecial()">特殊：手札すべてを特殊ゾーンへ送る</a>
+              <a onclick="shuffleHandToDeckBottom()">特殊：手札をシャッフルしてデッキボトムへ</a>
+              <a onclick="toggleHandPublic()">手札公開 / 非公開 切替え</a>
+              <a onclick="toggleAbilityCheckMode()">特性使用チェック (タップ選択)</a>
+              <a onclick="clearAllAbilityChecks()">特性チェックをすべて解除</a>
+              <a onclick="moveSpecialToDeckTop()">特殊：山札の一番上（トップ）へ</a>
+              <a onclick="moveSpecialToDeckBottom()">特殊：山札の一番下（ボトム）へ</a>
+              <a onclick="toggleBenchCount()">ベンチ枠 5 ⇄ 8 切替え</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="zone side-zone" id="player-side">
+          <span class="zone-title">サイド (6)</span>
+          <button class="btn-action" style="font-size: 9px; padding: 2px 4px; margin-top: 14px; z-index: 10;" onclick="openSideModal()">サイドを取る</button>
+        </div>
+        <div class="main-battle-bench">
+          <div class="zone battle-zone" id="player-battle">
+            <span class="zone-title" style="left:4px;">バトル場</span>
+            <button class="btn-danger" style="position: absolute; top: 2px; left: 45px; z-index: 10;" onclick="trashEntireBattleZone()">全トラッシュ</button>
+          </div>
+          <div class="bench-container" id="player-bench-container"></div>
+        </div>
+        <div class="deck-trash-zone">
+          <div class="zone stack-zone" id="player-deck">
+            <span class="zone-title">山札</span>
+            <div class="stack-count" id="player-deck-count">0枚</div>
+            <button class="btn-action" onclick="openModal('player-deck')">展開</button>
+          </div>
+          <div class="zone stack-zone" id="player-trash">
+            <span class="zone-title">トラッシュ</span>
+            <div class="stack-count" id="player-trash-count">0枚</div>
+            <button class="btn-action" onclick="openModal('player-trash')">展開</button>
+          </div>
+        </div>
+        <!-- 自分の特殊処理場 (重ね＆展開ボタン設置) -->
+        <div class="zone special-zone" id="player-special">
+          <span class="zone-title">特殊処理場</span>
+          <button class="btn-action" style="position: absolute; top: 2px; right: 2px; font-size: 9px; padding: 1px 4px; z-index: 10;" onclick="openModal('player-special')">展開</button>
+        </div>
+      </div>
+
+      <div class="zone hand-zone" id="player-hand"><span class="zone-title">手札 (自分)</span></div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">山札 / トラッシュ / 特殊処理場 中身一覧</h3>
+        <div>
+          <button class="btn-confirm" id="modal-confirm-btn" onclick="confirmModalSelection()">選択した 0 枚を手札へ</button>
+          <button class="close-btn" onclick="closeModal()">閉じる</button>
+        </div>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="side-modal">
+    <div class="modal-content" style="height: auto; max-height: 80vh;">
+      <div class="modal-header">
+        <h3>サイドを取得 (選択して確定)</h3>
+        <div>
+          <button class="btn-confirm" id="side-confirm-btn" onclick="confirmSideSelection()">選択したサイドを手札へ</button>
+          <button class="close-btn" onclick="closeSideModal()">閉じる</button>
+        </div>
+      </div>
+      <div class="modal-body" id="side-modal-body"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="zoom-modal">
+    <div id="zoom-modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 15px; font-weight: bold; color: #f39c12;">カード詳細確認 (全18項目対応)</span>
+        <button class="close-btn" onclick="closeZoomModal()">閉じる</button>
+      </div>
+      <div id="zoom-card-body"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="top-peek-modal">
+    <div id="zoom-modal-content" style="border-color: #2980b9; box-shadow: 0 0 30px rgba(41, 128, 185, 0.6);">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 15px; font-weight: bold; color: #3498db;" id="top-peek-title">山札の上から確認</span>
+        <button class="close-btn" onclick="closeTopPeekModal()">そのまま閉じる</button>
+      </div>
+      <div style="font-size: 11px; color: #aaa;">※カードをタップして「選択」できます</div>
+      <div id="top-peek-card-body"></div>
+      <div class="top-peek-btn-group">
+        <button class="btn-action" onclick="peekNextDeckTop()">もう1枚見る</button>
+        <button class="btn-confirm" onclick="takeSelectedHandAndRestSpecial()">選択を手札・残りを特殊へ</button>
+        <button class="btn-confirm" style="background:#27ae60;" onclick="takePeekedToHand()">すべて手札へ加える</button>
+        <button class="btn-special" onclick="returnPeekedAndShuffle()">山札に戻してシャッフル</button>
+        <button class="btn-special" style="background:#e67e22;" onclick="shufflePeekedToDeckBottom()">シャッフルしてデッキボトムへ</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwrHYT3O6OENwferrK0AsWcjRznfc2nAbhwSp0Cun3UyFxwmhhTE0JqasyI6atS3a91bg/exec";
+    
+    let cachedSheetDb = null;
+    let savedDecksDb = {};
+    
+    let selectedCardId = null;
+    let modalSelectedCardIds = [];
+    let peekedCards = [];
+    let peekSelectedCardIds = [];
+    let isBenchExpanded = false;
+    let currentMobileView = 'player';
+    let isAbilityCheckMode = false;
+    let isHandPublic = false;
+
+    let peer = null;
+    let conn = null;
+    let isHost = true;
+
+    const slotDamages = { 'player-battle': 0, 'opp-battle': 0 };
+    for(let i=1; i<=8; i++) {
+      slotDamages[`player-bench-${i}`] = 0;
+      slotDamages[`opp-bench-${i}`] = 0;
+    }
+
+    const gameState = {
+      'player-deck': [], 'player-trash': [], 'player-hand': [], 'player-side': [], 'player-battle': [], 'player-special': [],
+      'opp-deck': [], 'opp-trash': [], 'opp-hand': [], 'opp-side': [], 'opp-battle': [], 'opp-special': [],
+      'stadium-zone': []
+    };
+
+    for(let i=1; i<=8; i++) {
+      gameState[`player-bench-${i}`] = [];
+      gameState[`opp-bench-${i}`] = [];
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initBenchSlots();
+      setupStaticZoneEvents();
+      preloadAllData();
+
+      if (window.innerWidth <= 768) {
+        switchMobileView('player');
+      } else {
+        switchMobileView('both');
+      }
+
+      window.onclick = function(e) {
+        if (!e.target.matches('.btn-special')) {
+          const dropdowns = document.getElementsByClassName("dropdown");
+          for (let i = 0; i < dropdowns.length; i++) {
+            dropdowns[i].classList.remove('show');
+          }
+        }
+      }
+    });
+
+    async function preloadAllData() {
+      const log = document.getElementById('status-log');
+      const selectEl = document.getElementById('saved-deck-select');
+      
+      try {
+        log.innerText = "データを高速同期中...";
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const [resCards, resDecks] = await Promise.all([
+          fetch(GAS_WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: "get" }), signal: controller.signal }),
+          fetch(GAS_WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: "getDecks" }), signal: controller.signal })
+        ]).catch(e => [null, null]);
+
+        clearTimeout(timeoutId);
+
+        if (resCards && resCards.ok) {
+          cachedSheetDb = await resCards.json();
+        }
+        if (resDecks && resDecks.ok) {
+          savedDecksDb = await resDecks.json();
+          selectEl.innerHTML = '<option value="">-- デッキを選択してください --</option>';
+          Object.keys(savedDecksDb).forEach(deckName => {
+            const opt = document.createElement('option');
+            opt.value = deckName;
+            opt.innerText = deckName;
+            selectEl.appendChild(opt);
+          });
+        } else {
+          selectEl.innerHTML = '<option value="">-- 直貼り付け可能 --</option>';
+        }
+
+        log.innerText = "準備完了！（高速モード有効）";
+        log.style.color = "#00ffcc";
+      } catch (err) {
+        log.innerText = "同期完了（直貼り付け可能）";
+        selectEl.innerHTML = '<option value="">-- 直貼り付け可能 --</option>';
+      }
+    }
+
+    function onSelectSavedDeck() {
+      const selectedName = document.getElementById('saved-deck-select').value;
+      if (selectedName && savedDecksDb[selectedName]) {
+        document.getElementById('deck-text').value = savedDecksDb[selectedName];
+      }
+    }
+
+    function toggleActionLog() {
+      const container = document.getElementById('action-log-container');
+      container.classList.toggle('show');
+    }
+
+    function addActionLog(msg, isMe = true) {
+      const container = document.getElementById('action-log-container');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const sender = isMe ? '自分' : '相手';
+      entry.innerHTML = `<span>[${sender}]</span> ${msg}`;
+      container.appendChild(entry);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function switchMobileView(viewMode) {
+      currentMobileView = viewMode;
+      const pField = document.getElementById('player-field');
+      const oField = document.getElementById('opp-field');
+      const sWrapper = document.getElementById('stadium-wrapper');
+
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+      if (viewMode === 'player') {
+        pField.style.display = 'flex';
+        oField.style.display = 'none';
+        sWrapper.style.display = 'flex';
+        document.getElementById('tab-player').classList.add('active');
+      } else if (viewMode === 'opp') {
+        pField.style.display = 'none';
+        oField.style.display = 'flex';
+        sWrapper.style.display = 'flex';
+        document.getElementById('tab-opp').classList.add('active');
+      } else {
+        pField.style.display = 'flex';
+        oField.style.display = 'flex';
+        sWrapper.style.display = 'flex';
+        document.getElementById('tab-both').classList.add('active');
+      }
+    }
+
+    function toggleDropdown(e, dropdownId) {
+      e.stopPropagation();
+      const targetDropdown = document.getElementById(dropdownId);
+      const allDropdowns = document.getElementsByClassName("dropdown");
+      for (let i = 0; i < allDropdowns.length; i++) {
+        if (allDropdowns[i] !== targetDropdown) {
+          allDropdowns[i].classList.remove('show');
+        }
+      }
+      targetDropdown.classList.toggle("show");
+    }
+
+    function tossCoin() {
+      const isHeads = Math.random() < 0.5;
+      const resultText = isHeads ? "オモテ（表）" : "ウラ（裏）";
+      addActionLog(`コイントス ➔ 【 ${resultText} 】`);
+      alert(`🪙 コイントス結果: 【 ${resultText} 】`);
+    }
+
+    function resetGameField() {
+      const rawText = document.getElementById('deck-text').value.trim();
+      if (!rawText) return alert("デッキが読み込まれていません。デッキを選択またはテキストを入力してください。");
+
+      if (confirm("盤面を完全にリセットして、デッキを初期状態（山札・手札・サイド）にセットアップし直しますか？")) {
+        setupGame();
+        addActionLog("盤面を完全リセットしました");
+      }
+    }
+
+    function toggleHandPublic() {
+      isHandPublic = !isHandPublic;
+      addActionLog(`手札を${isHandPublic ? '【公開】' : '【非公開】'}に切り替えました`);
+      alert(isHandPublic ? "手札を相手に公開しました。" : "手札を非公開に設定しました。");
+      renderBoard();
+    }
+
+    function toggleAbilityCheckMode() {
+      isAbilityCheckMode = !isAbilityCheckMode;
+      alert(isAbilityCheckMode ? "【特性チェックモード】特性を使用したポケモンをタップしてください。" : "特性チェックモードを解除しました。");
+    }
+
+    function clearAllAbilityChecks() {
+      Object.keys(gameState).forEach(zId => {
+        gameState[zId].forEach(card => card.abilityUsed = false);
+      });
+      addActionLog("すべての特性チェックを解除しました");
+      renderBoard();
+    }
+
+    function initBenchSlots() {
+      ['player', 'opp'].forEach(target => {
+        const container = document.getElementById(`${target}-bench-container`);
+        container.innerHTML = '';
+        const count = isBenchExpanded ? 8 : 5;
+        container.className = `bench-container ${isBenchExpanded ? 'expand-8' : ''}`;
+
+        for (let i = 1; i <= count; i++) {
+          const slot = document.createElement('div');
+          slot.className = 'zone bench-slot';
+          slot.id = `${target}-bench-${i}`;
+          slot.innerHTML = `<span class="zone-title">ベンチ${i}</span>`;
+          if (target === 'player') {
+            const switchBtn = document.createElement('button');
+            switchBtn.className = 'btn-switch';
+            switchBtn.innerText = '入れ替え';
+            switchBtn.onclick = (e) => { e.stopPropagation(); switchBattleAndBench(i); };
+            slot.appendChild(switchBtn);
+          }
+          container.appendChild(slot);
+        }
+      });
+      setupStaticZoneEvents();
+    }
+
+    function toggleBenchCount() {
+      isBenchExpanded = !isBenchExpanded;
+      initBenchSlots();
+      renderBoard();
+    }
+
+    function switchBattleAndBench(benchIndex) {
+      const benchKey = `player-bench-${benchIndex}`;
+      const battleKey = 'player-battle';
+
+      const tempCards = [...gameState[battleKey]];
+      gameState[battleKey] = [...gameState[benchKey]];
+      gameState[benchKey] = tempCards;
+
+      const tempDmg = slotDamages[battleKey];
+      slotDamages[battleKey] = slotDamages[benchKey];
+      slotDamages[benchKey] = tempDmg;
+
+      addActionLog(`バトル場とベンチ${benchIndex}のポケモン（ダメージ含む）を入れ替えました`);
+      renderBoard();
+    }
+
+    function trashEntireBattleZone() {
+      const battleCards = gameState['player-battle'];
+      if (battleCards.length === 0) return alert("バトル場にカードがありません。");
+
+      if (confirm("バトル場のカード（進化元・エネルギー含む）をすべてトラッシュしますか？")) {
+        while (battleCards.length > 0) {
+          const card = battleCards.pop();
+          card.statusCond = null;
+          card.abilityUsed = false;
+          gameState['player-trash'].push(card);
+        }
+        slotDamages['player-battle'] = 0;
+        addActionLog("バトル場のカードをすべてトラッシュしました");
+        renderBoard();
+      }
+    }
+
+    function sendAllHandToSpecial() {
+      const hands = gameState['player-hand'];
+      if (hands.length === 0) return alert("手札がありません。");
+
+      if (confirm("手札をすべて「特殊処理場」へ送りますか？")) {
+        while (hands.length > 0) {
+          const card = hands.pop();
+          gameState['player-special'].push(card);
+        }
+        addActionLog("手札をすべて特殊処理場へ移動しました");
+        renderBoard();
+      }
+    }
+
+    function moveSpecialToDeckTop() {
+      const specialCards = gameState['player-special'];
+      if (specialCards.length === 0) return alert("特殊処理場にカードがありません。");
+
+      while(specialCards.length > 0) {
+        const card = specialCards.shift();
+        gameState['player-deck'].push(card);
+      }
+
+      addActionLog("特殊処理場のカードを山札のトップへ送りました");
+      renderBoard();
+    }
+
+    function moveSpecialToDeckBottom() {
+      const specialCards = gameState['player-special'];
+      if (specialCards.length === 0) return alert("特殊処理場にカードがありません。");
+
+      while(specialCards.length > 0) {
+        const card = specialCards.shift();
+        gameState['player-deck'].unshift(card);
+      }
+
+      addActionLog("特殊処理場のカードを山札のボトムへ送りました");
+      renderBoard();
+    }
+
+    function shuffleHandToDeckBottom() {
+      const handCards = gameState['player-hand'];
+      if (handCards.length === 0) return alert("手札がありません。");
+
+      for (let i = handCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [handCards[i], handCards[j]] = [handCards[j], handCards[i]];
+      }
+
+      while (handCards.length > 0) {
+        const card = handCards.shift();
+        gameState['player-deck'].unshift(card);
+      }
+
+      addActionLog("手札をシャッフルして山札のボトム（一番下）に送りました");
+      renderBoard();
+    }
+
+    function peekDeckTop() {
+      const deck = gameState['player-deck'];
+      if (deck.length === 0) return alert("山札にカードがありません。");
+
+      peekedCards = [deck.pop()];
+      peekSelectedCardIds = [];
+      renderTopPeekModal();
+      addActionLog("山札の上から1枚を確認しました");
+      renderBoard();
+    }
+
+    function peekNextDeckTop() {
+      const deck = gameState['player-deck'];
+      if (deck.length === 0) return alert("もう山札にカードがありません。");
+
+      peekedCards.push(deck.pop());
+      renderTopPeekModal();
+      addActionLog("山札の上からさらにもう1枚確認しました");
+      renderBoard();
+    }
+
+    function getEnergyClass(card) {
+      if (card.cardType !== 'エネルギー') return '';
+      const name = card.name || '';
+      const elem = card.element || '';
+
+      if (name.includes('基本') || ['草','炎','水','雷','超','闘','悪','鋼'].some(e => name.includes(e) || elem.includes(e))) {
+        if (name.includes('草') || elem === '草') return 'energy-草';
+        if (name.includes('炎') || elem === '炎') return 'energy-炎';
+        if (name.includes('水') || elem === '水') return 'energy-水';
+        if (name.includes('雷') || elem === '雷') return 'energy-雷';
+        if (name.includes('超') || elem === '超') return 'energy-超';
+        if (name.includes('闘') || elem === '闘') return 'energy-闘';
+        if (name.includes('悪') || elem === '悪') return 'energy-悪';
+        if (name.includes('鋼') || elem === '鋼') return 'energy-鋼';
+      }
+      return 'energy-特殊 special-energy';
+    }
+
+    function renderTopPeekModal() {
+      const modal = document.getElementById('top-peek-modal');
+      const title = document.getElementById('top-peek-title');
+      const body = document.getElementById('top-peek-card-body');
+
+      title.innerText = `山札の上から確認 (${peekedCards.length}枚)`;
+      body.innerHTML = '';
+
+      peekedCards.forEach((card, idx) => {
+        const isPokemon = card.cardType === "ポケモン";
+        const isSelected = peekSelectedCardIds.includes(card.id);
+        const cardDiv = document.createElement('div');
+        cardDiv.style.marginBottom = "10px";
+        
+        const energyClass = getEnergyClass(card);
+
+        cardDiv.innerHTML = `
+          <div class="zoom-card-large element-${card.element || '無'} type-${card.cardType || 'グッズ'} ${energyClass} ${isSelected ? 'selected-peek' : ''}">
+            <div class="card-header-line">
+              <div>
+                <span style="font-size: 16px; font-weight: bold; color: inherit;">[${idx + 1}枚目] ${card.name || '名称不明'} ${isSelected ? '✓(手札選択中)' : ''}</span>
+                <div style="font-size: 10px; color: inherit; opacity: 0.8;">[分類: ${card.cardType || '-'}]</div>
+              </div>
+              ${isPokemon && card.hp !== "-" ? `<span style="color:#ff7676; font-size:14px; font-weight:bold;">HP ${card.hp}</span>` : ''}
+            </div>
+            ${card.abilityName && card.abilityName !== "-" ? `<div class="detail-section"><div style="color:#f39c12; font-weight:bold;">特性: ${card.abilityName}</div><div>${card.abilityDesc || '-'}</div></div>` : ''}
+            ${!isPokemon ? `<div class="detail-section"><div>${card.abilityDesc || '効果説明なし'}</div></div>` : ''}
+          </div>
+        `;
+
+        cardDiv.onclick = () => {
+          const sIdx = peekSelectedCardIds.indexOf(card.id);
+          if (sIdx === -1) {
+            peekSelectedCardIds.push(card.id);
+          } else {
+            peekSelectedCardIds.splice(sIdx, 1);
+          }
+          renderTopPeekModal();
+        };
+
+        body.appendChild(cardDiv);
+      });
+
+      modal.style.display = 'flex';
+    }
+
+    function closeTopPeekModal() {
+      while (peekedCards.length > 0) {
+        gameState['player-deck'].push(peekedCards.pop());
+      }
+      peekSelectedCardIds = [];
+      document.getElementById('top-peek-modal').style.display = 'none';
+      renderBoard();
+    }
+
+    function takeSelectedHandAndRestSpecial() {
+      if (peekSelectedCardIds.length === 0) return alert("手札に加えるカードをタップして1枚以上選択してください。");
+
+      let handCount = 0;
+      let specialCount = 0;
+
+      while (peekedCards.length > 0) {
+        const card = peekedCards.pop();
+        if (peekSelectedCardIds.includes(card.id)) {
+          gameState['player-hand'].push(card);
+          handCount++;
+        } else {
+          gameState['player-special'].push(card);
+          specialCount++;
+        }
+      }
+
+      peekSelectedCardIds = [];
+      addActionLog(`確認カード: ${handCount}枚を手札へ、${specialCount}枚を特殊処理場へ振分けました`);
+      document.getElementById('top-peek-modal').style.display = 'none';
+      renderBoard();
+    }
+
+    function takePeekedToHand() {
+      while (peekedCards.length > 0) {
+        gameState['player-hand'].push(peekedCards.pop());
+      }
+      peekSelectedCardIds = [];
+      addActionLog("確認したカードをすべて手札に加えました");
+      document.getElementById('top-peek-modal').style.display = 'none';
+      renderBoard();
+    }
+
+    function returnPeekedAndShuffle() {
+      while (peekedCards.length > 0) {
+        gameState['player-deck'].push(peekedCards.pop());
+      }
+      peekSelectedCardIds = [];
+      shuffleMyDeck();
+      document.getElementById('top-peek-modal').style.display = 'none';
+    }
+
+    function shufflePeekedToDeckBottom() {
+      for (let i = peekedCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [peekedCards[i], peekedCards[j]] = [peekedCards[j], peekedCards[i]];
+      }
+      while (peekedCards.length > 0) {
+        gameState['player-deck'].unshift(peekedCards.pop());
+      }
+      peekSelectedCardIds = [];
+      addActionLog("確認したカードをシャッフルして山札のボトムへ送りました");
+      document.getElementById('top-peek-modal').style.display = 'none';
+      renderBoard();
+    }
+
+    // --- オンライン通信 ---
+    function createRoom() {
+      const statusEl = document.getElementById('online-status');
+      statusEl.innerText = "部屋を作成中...";
+      peer = new Peer();
+      peer.on('open', (id) => { isHost = true; statusEl.innerText = `【部屋ID】 ${id} (相手に送信)`; });
+      peer.on('connection', (c) => { conn = c; setupCommunication(); });
+    }
+
+    function joinRoom() {
+      const roomId = document.getElementById('room-id-input').value.trim();
+      if (!roomId) return alert("部屋IDを入力してください");
+      const statusEl = document.getElementById('online-status');
+      statusEl.innerText = "接続中...";
+      peer = new Peer();
+      peer.on('open', () => { isHost = false; conn = peer.connect(roomId); setupCommunication(); });
+    }
+
+    function setupCommunication() {
+      const statusEl = document.getElementById('online-status');
+      conn.on('open', () => { statusEl.innerText = "対戦相手と接続成功！"; sendGameState(); });
+      conn.on('data', (data) => { 
+        if (data.type === 'SYNC_GAME') {
+          receiveGameState(data.gameState, data.slotDamages);
+        }
+      });
+    }
+
+    function sendGameState() {
+      if (conn && conn.open) {
+        const sendState = {};
+        Object.keys(gameState).forEach(key => {
+          if (key.startsWith('player-') || key === 'stadium-zone') {
+            sendState[key] = JSON.parse(JSON.stringify(gameState[key]));
+          }
+        });
+
+        sendState['player-special'] = sendState['player-special'].map(c => ({ ...c, cardType: '裏面' }));
+        if (!isHandPublic) {
+          sendState['player-hand'] = sendState['player-hand'].map(c => ({ ...c, cardType: '裏面' }));
+        }
+
+        const sendDamages = {};
+        Object.keys(slotDamages).forEach(key => {
+          if (key.startsWith('player-')) sendDamages[key] = slotDamages[key];
+        });
+
+        conn.send({ type: 'SYNC_GAME', gameState: sendState, slotDamages: sendDamages });
+      }
+    }
+
+    function receiveGameState(incomingState, incomingDamages) {
+      if (!incomingState) return;
+
+      Object.keys(incomingState).forEach(key => {
+        if (key.startsWith('player-')) {
+          const oppKey = key.replace('player-', 'opp-');
+          gameState[oppKey] = incomingState[key];
+        } else if (key === 'stadium-zone') {
+          gameState['stadium-zone'] = incomingState[key];
+        }
+      });
+
+      if (incomingDamages) {
+        Object.keys(incomingDamages).forEach(key => {
+          if (key.startsWith('player-')) {
+            const oppKey = key.replace('player-', 'opp-');
+            slotDamages[oppKey] = incomingDamages[key];
+          }
+        });
+      }
+
+      renderBoard(false);
+    }
+
+    function parseDeckText(text) {
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '');
+      const cardList = [];
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        if (line.match(/^(ポケモン|グッズ|サポート|ポケモンのどうぐ|スタジアム|エネルギー)\s*\(\d+\)/)) continue;
+        let singleMatch = line.match(/^(.+?)\s+(\d+)枚$/);
+        if (singleMatch) { cardList.push({ name: singleMatch[1].trim(), count: parseInt(singleMatch[2], 10) }); continue; }
+        let nextLine1 = lines[i + 1] || "", nextLine2 = lines[i + 2] || "", nextLine3 = lines[i + 3] || "";
+        if (nextLine1.match(/^[A-Za-z0-9]+$/) && nextLine2.match(/^\d+\/\d+$/) && nextLine3.match(/^(\d+)枚$/)) {
+          cardList.push({ name: line.trim(), count: parseInt(nextLine3.match(/^(\d+)枚$/)[1], 10) }); i += 3; continue;
+        }
+        if (nextLine1.match(/^(\d+)枚$/)) { cardList.push({ name: line.trim(), count: parseInt(nextLine1.match(/^(\d+)枚$/)[1], 10) }); i += 1; continue; }
+      }
+      return cardList;
+    }
+
+    async function setupGame() {
+      const log = document.getElementById('status-log');
+      const rawText = document.getElementById('deck-text').value.trim();
+      if (!rawText) return alert("デッキテキストを入力してください");
+
+      log.innerText = "デッキ構築中...";
+
+      if (!cachedSheetDb) {
+        const res = await fetch(GAS_WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: "get" }) });
+        cachedSheetDb = await res.json();
+      }
+
+      const sheetDb = cachedSheetDb || {};
+      const cardList = parseDeckText(rawText);
+
+      let fullDeck = [];
+      let missingCards = [];
+      let idCounter = 1;
+      const myOwnerId = isHost ? 'host' : 'guest';
+
+      cardList.forEach(item => {
+        const data = sheetDb[item.name];
+        if (data) {
+          for (let c = 0; c < item.count; c++) {
+            const maxHp = parseInt(data.hp, 10) || 0;
+            fullDeck.push({ ...data, id: `${myOwnerId}-card-${idCounter++}`, owner: myOwnerId, maxHp: maxHp, abilityUsed: false, statusCond: null });
+          }
+        } else {
+          missingCards.push(item.name);
+        }
+      });
+
+      if (fullDeck.length === 0) return alert("カードが1枚も見つかりませんでした。カードデータシートへの登録を確認してください。");
+
+      if (missingCards.length > 0) {
+        const uniqueMissing = [...new Set(missingCards)];
+        addActionLog(`<span style="color:#e74c3c;">【警告】未登録カードあり: ${uniqueMissing.join(", ")}</span>`, true);
+        alert(`⚠️ 以下のカードが「カードデータ」シートに登録されていません（読み込みから除外されました）\n\n・${uniqueMissing.join("\n・")}`);
+      }
+
+      for (let i = fullDeck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [fullDeck[i], fullDeck[j]] = [fullDeck[j], fullDeck[i]];
+      }
+
+      gameState['player-side'] = fullDeck.splice(0, 6);
+      gameState['player-hand'] = fullDeck.splice(0, 7);
+      gameState['player-deck'] = fullDeck;
+      gameState['player-trash'] = [];
+      gameState['player-battle'] = [];
+      gameState['player-special'] = [];
+      for(let i=1; i<=8; i++) gameState[`player-bench-${i}`] = [];
+      
+      Object.keys(slotDamages).forEach(k => {
+        if(k.startsWith('player-')) slotDamages[k] = 0;
+      });
+
+      log.innerText = "自分のデッキ読み込み完了！";
+      addActionLog("デッキを読み込んで対戦をセットアップしました");
+      renderBoard();
+    }
+
+    function drawCard() {
+      if (gameState['player-deck'].length === 0) return alert("山札がありません");
+      const card = gameState['player-deck'].pop();
+      gameState['player-hand'].push(card);
+      addActionLog("山札から1枚引きました");
+      renderBoard();
+    }
+
+    function shuffleMyDeck() {
+      const deck = gameState['player-deck'];
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      addActionLog("山札をシャッフルしました");
+      renderBoard();
+    }
+
+    function returnHandToDeck() {
+      if (gameState['player-hand'].length === 0) return alert("手札がありません");
+      gameState['player-deck'].push(...gameState['player-hand']);
+      gameState['player-hand'] = [];
+      addActionLog("手札をすべて山札に戻してシャッフルしました");
+      shuffleMyDeck();
+    }
+
+    function renderBoard(shouldSync = true) {
+      renderZone('player-hand', true);
+      renderZone('player-side', false, true);
+      renderZone('player-battle', true);
+      renderZone('player-special', true);
+      
+      const isOppHandFaceUp = gameState['opp-hand'].length > 0 && gameState['opp-hand'][0].cardType !== '裏面';
+      renderZone('opp-hand', isOppHandFaceUp, !isOppHandFaceUp);
+      
+      renderZone('opp-side', false, true);
+      renderZone('opp-battle', true);
+      renderZone('opp-special', false, true);
+
+      const count = isBenchExpanded ? 8 : 5;
+      for (let i = 1; i <= count; i++) {
+        renderZone(`player-bench-${i}`, true);
+        renderZone(`opp-bench-${i}`, true);
+      }
+
+      renderZone('stadium-zone', true);
+
+      document.getElementById('player-deck-count').innerText = `${gameState['player-deck'].length}枚`;
+      document.getElementById('player-trash-count').innerText = `${gameState['player-trash'].length}枚`;
+      document.getElementById('opp-deck-count').innerText = `${gameState['opp-deck'].length}枚`;
+      document.getElementById('opp-trash-count').innerText = `${gameState['opp-trash'].length}枚`;
+
+      renderStackTop('player-deck', false);
+      renderStackTop('player-trash', true);
+      renderStackTop('opp-deck', false);
+      renderStackTop('opp-trash', true);
+
+      if (shouldSync) sendGameState();
+    }
+
+    function createSlotDmgCtrl(zoneId) {
+      const ctrl = document.createElement('div');
+      ctrl.className = 'slot-dmg-ctrl';
+      
+      const val = slotDamages[zoneId] || 0;
+
+      const m10 = document.createElement('button');
+      m10.className = 'slot-dmg-btn';
+      m10.innerText = '-10';
+      m10.onclick = (e) => { e.stopPropagation(); alterSlotDamage(zoneId, -10); };
+
+      const label = document.createElement('span');
+      label.className = 'slot-dmg-val';
+      label.innerText = val > 0 ? `${val}` : '0';
+
+      const p10 = document.createElement('button');
+      p10.className = 'slot-dmg-btn';
+      p10.innerText = '+10';
+      p10.onclick = (e) => { e.stopPropagation(); alterSlotDamage(zoneId, 10); };
+
+      const p50 = document.createElement('button');
+      p50.className = 'slot-dmg-btn';
+      p50.innerText = '+50';
+      p50.onclick = (e) => { e.stopPropagation(); alterSlotDamage(zoneId, 50); };
+
+      ctrl.appendChild(m10);
+      ctrl.appendChild(label);
+      ctrl.appendChild(p10);
+      ctrl.appendChild(p50);
+      return ctrl;
+    }
+
+    function alterSlotDamage(zoneId, delta) {
+      slotDamages[zoneId] = (slotDamages[zoneId] || 0) + delta;
+      if (slotDamages[zoneId] < 0) slotDamages[zoneId] = 0;
+      addActionLog(`${zoneId.includes('battle') ? 'バトル場' : 'ベンチ'}のダメージを ${slotDamages[zoneId]} に変更`);
+      renderBoard();
+    }
+
+    function renderZone(zoneId, isFaceUp, isForceFaceDown = false) {
+      const zoneEl = document.getElementById(zoneId);
+      if (!zoneEl) return;
+      
+      const cards = gameState[zoneId];
+      const total = cards.length;
+
+      let topPokemon = null;
+      for (let i = total - 1; i >= 0; i--) {
+        if (cards[i].cardType === "ポケモン") {
+          topPokemon = cards[i];
+          break;
+        }
+      }
+
+      let baseTitle = "ゾーン";
+      if (zoneId.includes('battle')) baseTitle = "バトル場";
+      else if (zoneId.includes('bench')) {
+        const match = zoneId.match(/\d+/);
+        baseTitle = `ベンチ${match ? match[0] : ''}`;
+      } else if (zoneId.includes('side')) baseTitle = "サイド (6)";
+      else if (zoneId.includes('special')) baseTitle = "特殊処理場";
+
+      const hpTitleInfo = (topPokemon && topPokemon.hp && topPokemon.hp !== "-") ? ` [HP: ${topPokemon.hp}]` : "";
+
+      const switchBtn = zoneEl.querySelector('.btn-switch');
+      const sideBtn = zoneEl.querySelector('button.btn-action');
+      const trashAllBtn = zoneEl.querySelector('button.btn-danger');
+
+      zoneEl.innerHTML = `<span class="zone-title">${baseTitle}${hpTitleInfo}</span>`;
+      if (switchBtn) zoneEl.appendChild(switchBtn);
+      if (sideBtn && zoneId === 'player-side') zoneEl.appendChild(sideBtn);
+      if (trashAllBtn && zoneId === 'player-battle') zoneEl.appendChild(trashAllBtn);
+
+      // 特殊ゾーンの展開ボタン保持処理
+      if (zoneId.includes('special')) {
+        const expandBtn = document.createElement('button');
+        expandBtn.className = 'btn-action';
+        expandBtn.style.cssText = 'position: absolute; top: 2px; right: 2px; font-size: 9px; padding: 1px 4px; z-index: 10;';
+        expandBtn.innerText = '展開';
+        expandBtn.onclick = () => openModal(zoneId);
+        zoneEl.appendChild(expandBtn);
+      }
+
+      if (zoneId.startsWith('player-') && (zoneId.includes('battle') || zoneId.includes('bench'))) {
+        zoneEl.appendChild(createSlotDmgCtrl(zoneId));
+      } else if (zoneId.startsWith('opp-') && (zoneId.includes('battle') || zoneId.includes('bench'))) {
+        const dVal = slotDamages[zoneId] || 0;
+        if (dVal > 0) {
+          const badge = document.createElement('div');
+          badge.className = 'slot-dmg-ctrl';
+          badge.innerHTML = `<span class="slot-dmg-val">${dVal}</span>`;
+          zoneEl.appendChild(badge);
+        }
+      }
+
+      cards.forEach((card, index) => {
+        const isTopCard = (index === total - 1);
+        const cardEl = createCardElement(card, isForceFaceDown ? false : isFaceUp, zoneId, isTopCard);
+        
+        if (index > 0 && (zoneId.includes('battle') || zoneId.includes('bench') || zoneId.includes('special'))) {
+          cardEl.classList.add('stacked-card');
+        }
+        
+        cardEl.addEventListener('dragover', (e) => e.preventDefault());
+        cardEl.addEventListener('drop', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const draggedId = e.dataTransfer.getData('text/plain') || selectedCardId;
+          if (draggedId) {
+            reorderStackCard(draggedId, card.id, zoneId);
+            selectedCardId = null;
+            renderBoard();
+          }
+        });
+
+        zoneEl.appendChild(cardEl);
+      });
+    }
+
+    function reorderStackCard(draggedId, targetCardId, zoneId) {
+      const cards = gameState[zoneId];
+      if (!cards) return moveCard(draggedId, zoneId);
+
+      const draggedIdx = cards.findIndex(c => c.id === draggedId);
+      const targetIdx = cards.findIndex(c => c.id === targetCardId);
+
+      if (draggedIdx !== -1 && targetIdx !== -1) {
+        const [draggedCard] = cards.splice(draggedIdx, 1);
+        cards.splice(targetIdx, 0, draggedCard);
+        addActionLog(`${draggedCard.name || 'カード'} の重なり順を変更しました`);
+      } else {
+        moveCard(draggedId, zoneId);
+      }
+    }
+
+    function renderStackTop(zoneId, isFaceUp) {
+      const zoneEl = document.getElementById(zoneId);
+      const titleText = zoneEl.querySelector('.zone-title')?.innerText || '';
+      const stackCountEl = zoneEl.querySelector('.stack-count');
+      const btnEl = zoneEl.querySelector('button');
+
+      zoneEl.innerHTML = `<span class="zone-title">${titleText}</span>`;
+      if (stackCountEl) zoneEl.appendChild(stackCountEl);
+
+      const stack = gameState[zoneId];
+      if (stack.length > 0) {
+        const topCard = stack[stack.length - 1];
+        const cardEl = createCardElement(topCard, isFaceUp, zoneId, true);
+        zoneEl.insertBefore(cardEl, stackCountEl || null);
+      }
+      if (btnEl) zoneEl.appendChild(btnEl);
+    }
+
+    function setStatusCondition(card, cond) {
+      card.statusCond = (card.statusCond === cond) ? null : cond;
+      addActionLog(`${card.name} の状態異常: ${card.statusCond || '通常'}`);
+      renderBoard();
+    }
+
+    function openZoomModal(card) {
+      const modal = document.getElementById('zoom-modal');
+      const body = document.getElementById('zoom-card-body');
+
+      const isPokemon = card.cardType === "ポケモン";
+      const energyClass = getEnergyClass(card);
+
+      body.innerHTML = `
+        <div class="zoom-card-large element-${card.element || '無'} type-${card.cardType || 'グッズ'} ${energyClass}">
+          <div class="card-header-line">
+            <div>
+              <span style="font-size: 18px; font-weight: bold; color: inherit;">${card.name || '名称不明'}</span>
+              <div style="font-size: 11px; opacity:0.8; margin-top:2px;">[分類: ${card.cardType || '-'}] [進化段階: ${card.stage || 'たね'}]</div>
+            </div>
+            ${isPokemon && card.hp !== "-" ? `<div style="text-align:right;"><span style="color:#ff7676; font-size:16px; font-weight:bold;">HP ${card.hp}</span><div style="font-size:11px; color:#f1c40f;">属性: ${card.element || '-'}</div></div>` : ''}
+          </div>
+
+          ${card.abilityName && card.abilityName !== "-" ? `
+            <div class="detail-section">
+              <div style="color:#f39c12; font-weight:bold; font-size:13px;">特性: ${card.abilityName}</div>
+              <div style="margin-top:2px;">${card.abilityDesc || '-'}</div>
+            </div>
+          ` : ''}
+
+          ${isPokemon ? `
+            <div class="detail-section">
+              <div style="font-weight:bold; color:#00ffcc; font-size:13px; display:flex; justify-content:space-between;">
+                <span>ワザ1: ${card.skillName1 || '-'}</span>
+                <span style="color:#ffeb3b;">ダメージ: ${card.skillDamage1 || '0'} (エネ: ${card.skillCost1 || '-'})</span>
+              </div>
+              <div style="margin-top:2px; font-size:11px;">${card.skillDesc1 || '効果説明なし'}</div>
+              
+              ${card.skillName2 && card.skillName2 !== "-" ? `
+                <hr style="border-color:#555; margin:6px 0;">
+                <div style="font-weight:bold; color:#00ffcc; font-size:13px; display:flex; justify-content:space-between;">
+                  <span>ワザ2: ${card.skillName2}</span>
+                  <span style="color:#ffeb3b;">ダメージ: ${card.skillDamage2 || '0'} (エネ: ${card.skillCost2 || '-'})</span>
+                </div>
+                <div style="margin-top:2px; font-size:11px;">${card.skillDesc2 || '効果説明なし'}</div>
+              ` : ''}
+            </div>
+          ` : `
+            <div class="detail-section">
+              <div style="font-weight:bold; color:#00ffcc; font-size:13px;">カード効果説明:</div>
+              <div style="margin-top:2px;">${card.abilityDesc || '説明はありません'}</div>
+            </div>
+          `}
+
+          <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">弱点</span><span class="detail-val">${card.weakness || '-'}</span></div>
+            <div class="detail-item"><span class="detail-label">抵抗力</span><span class="detail-val">${card.resistance || '-'}</span></div>
+            <div class="detail-item"><span class="detail-label">にげるコスト</span><span class="detail-val">${card.retreat || '-'}</span></div>
+            <div class="detail-item"><span class="detail-label">タイプ/属性</span><span class="detail-val">${card.element || '-'}</span></div>
+          </div>
+        </div>
+      `;
+      modal.style.display = 'flex';
+    }
+
+    function closeZoomModal() {
+      document.getElementById('zoom-modal').style.display = 'none';
+    }
+
+    function createCardElement(card, isFaceUp, zoneId, isTopCard = true) {
+      const cardEl = document.createElement('div');
+      
+      const isBattleZone = zoneId.includes('battle');
+      const isRotated = card.statusCond === 'マヒ' || card.statusCond === 'ねむり' || card.statusCond === 'こんらん';
+      const cardNameText = card.name || (card.cardType === '裏面' ? '裏面' : 'カード');
+      
+      const energyClass = getEnergyClass(card);
+
+      cardEl.className = `card-frame ${isBattleZone ? 'battle-card' : ''} ${isFaceUp && card.cardType !== '裏面' ? `element-${card.element} type-${card.cardType}` : 'card-back'} ${energyClass} ${selectedCardId === card.id ? 'selected' : ''} ${isRotated ? 'rotated-90' : ''}`;
+      cardEl.draggable = true;
+      cardEl.dataset.id = card.id;
+
+      if (!isFaceUp || card.cardType === '裏面') {
+        cardEl.innerHTML = ``;
+      } else {
+        const isPokemon = card.cardType === "ポケモン";
+        const currentZoneDmg = slotDamages[zoneId] || 0;
+        const isFainted = isPokemon && card.maxHp > 0 && currentZoneDmg >= card.maxHp;
+
+        let centerContentHtml = '';
+        if (isPokemon) {
+          centerContentHtml = '<div class="card-skills-area">';
+          
+          if (card.hp && card.hp !== "-") {
+            centerContentHtml += `<div class="skill-item" style="color: #ff7676; font-weight: bold;">HP ${card.hp}</div>`;
+          }
+          
+          if (card.skillName1 && card.skillName1 !== "-") {
+            centerContentHtml += `<div class="skill-item"><span class="skill-name">【ワザ1】${card.skillName1}</span></div>`;
+          }
+          
+          if (card.skillName2 && card.skillName2 !== "-") {
+            centerContentHtml += `<div class="skill-item"><span class="skill-name">【ワザ2】${card.skillName2}</span></div>`;
+          }
+          
+          centerContentHtml += '</div>';
+        } else {
+          centerContentHtml = `<div class="card-desc-text" style="text-align: center;">${card.cardType || 'カード'}</div>`;
+        }
+
+        cardEl.innerHTML = `
+          ${card.abilityUsed ? `<div class="ability-used-badge">[特性済]</div>` : ''}
+          ${card.statusCond ? `<div class="status-condition-badge ${card.statusCond}">${card.statusCond}</div>` : ''}
+          ${isPokemon && currentZoneDmg > 0 ? `<div class="damage-badge ${isFainted ? 'fainted' : ''}">${isFainted ? 'きぜつ' : currentZoneDmg}</div>` : ''}
+          <div>
+            <div class="card-header-line">
+              <span class="card-name">${cardNameText}</span>
+            </div>
+            ${centerContentHtml}
+          </div>
+        `;
+
+        if (isTopCard) {
+          const zoomBtn = document.createElement('div');
+          zoomBtn.className = 'zoom-btn';
+          zoomBtn.innerText = '🔍';
+          zoomBtn.title = '拡大';
+          zoomBtn.onclick = (e) => { e.stopPropagation(); openZoomModal(card); };
+          cardEl.appendChild(zoomBtn);
+        }
+
+        if (isPokemon && isBattleZone && isTopCard) {
+          const statusCtrl = document.createElement('div');
+          statusCtrl.className = 'status-ctrl';
+          
+          ['どく', 'やけど', 'マヒ', 'ねむり', 'こんらん'].forEach(st => {
+            const btn = document.createElement('button');
+            btn.className = 'status-btn';
+            btn.innerText = st;
+            btn.onclick = (e) => { e.stopPropagation(); setStatusCondition(card, st); };
+            statusCtrl.appendChild(btn);
+          });
+          cardEl.appendChild(statusCtrl);
+        }
+      }
+
+      cardEl.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', card.id);
+        selectedCardId = card.id;
+      });
+
+      cardEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        if (isAbilityCheckMode && isFaceUp) {
+          card.abilityUsed = !card.abilityUsed;
+          addActionLog(`${cardNameText} の特性使用チェック: ${card.abilityUsed ? '【済】' : '【解除】'}`);
+          renderBoard();
+          return;
+        }
+
+        selectedCardId = (selectedCardId === card.id) ? null : card.id;
+        renderBoard();
+      });
+
+      return cardEl;
+    }
+
+    function setupStaticZoneEvents() {
+      const zones = document.querySelectorAll('.zone');
+      zones.forEach(zone => {
+        zone.addEventListener('dragover', (e) => e.preventDefault());
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const cardId = e.dataTransfer.getData('text/plain') || selectedCardId;
+          if (cardId) {
+            moveCard(cardId, zone.id);
+            selectedCardId = null;
+            renderBoard();
+          }
+        });
+
+        zone.addEventListener('click', () => {
+          if (selectedCardId) {
+            moveCard(selectedCardId, zone.id);
+            selectedCardId = null;
+            renderBoard();
+          }
+        });
+      });
+    }
+
+    function moveCard(cardId, targetZoneId) {
+      let foundCard = null;
+
+      Object.keys(gameState).forEach(zId => {
+        if (zId.startsWith('player-') || zId === 'stadium-zone') {
+          const idx = gameState[zId].findIndex(c => c.id === cardId);
+          if (idx !== -1) {
+            foundCard = gameState[zId].splice(idx, 1)[0];
+          }
+        }
+      });
+
+      if (foundCard && targetZoneId) {
+        let realTarget = targetZoneId;
+        if (!targetZoneId.startsWith('player-') && targetZoneId !== 'stadium-zone') {
+          realTarget = targetZoneId.replace('opp-', 'player-');
+        }
+
+        gameState[realTarget].push(foundCard);
+        addActionLog(`${foundCard.name || 'カード'} を ${realTarget} へ移動しました`);
+      }
+    }
+
+    // --- サイド取得用モーダル ---
+    let sideSelectedCardIds = [];
+    function openSideModal() {
+      const sides = gameState['player-side'];
+      if (sides.length === 0) return alert("サイドが残っていません。");
+
+      sideSelectedCardIds = [];
+      const modal = document.getElementById('side-modal');
+      const body = document.getElementById('side-modal-body');
+      const btn = document.getElementById('side-confirm-btn');
+
+      btn.innerText = `選択した 0 枚を手札へ`;
+      body.innerHTML = '';
+
+      sides.forEach((card, idx) => {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'card-frame card-back';
+        cardEl.style.width = '75px';
+        cardEl.style.height = '105px';
+
+        cardEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const index = sideSelectedCardIds.indexOf(card.id);
+          if (index === -1) {
+            sideSelectedCardIds.push(card.id);
+            cardEl.classList.add('multi-selected');
+          } else {
+            sideSelectedCardIds.splice(index, 1);
+            cardEl.classList.remove('multi-selected');
+          }
+          btn.innerText = `選択した ${sideSelectedCardIds.length} 枚を手札へ`;
+        });
+
+        body.appendChild(cardEl);
+      });
+
+      modal.style.display = 'flex';
+    }
+
+    function confirmSideSelection() {
+      if (sideSelectedCardIds.length === 0) return alert("取得するサイドをタップして選択してください。");
+      addActionLog(`サイドを ${sideSelectedCardIds.length} 枚取得して手札に加えました`);
+      sideSelectedCardIds.forEach(id => moveCard(id, 'player-hand'));
+      sideSelectedCardIds = [];
+      closeSideModal();
+      renderBoard();
+    }
+
+    function closeSideModal() {
+      document.getElementById('side-modal').style.display = 'none';
+      sideSelectedCardIds = [];
+    }
+
+    // --- 山札・トラッシュ・特殊処理場モーダル ---
+    function openModal(zoneId) {
+      if (zoneId === 'opp-deck') return alert("相手の山札の中身を展開することはできません。");
+
+      modalSelectedCardIds = [];
+      const modal = document.getElementById('modal');
+      const modalTitle = document.getElementById('modal-title');
+      const modalBody = document.getElementById('modal-body');
+      const confirmBtn = document.getElementById('modal-confirm-btn');
+
+      let titleLabel = '中身 一覧';
+      if (zoneId.includes('deck')) titleLabel = '山札 一覧';
+      else if (zoneId.includes('trash')) titleLabel = 'トラッシュ 一覧';
+      else if (zoneId.includes('special')) titleLabel = '特殊処理場 一覧';
+
+      modalTitle.innerText = `${titleLabel} (タップで複数選択)`;
+      confirmBtn.innerText = `選択した 0 枚を手札へ`;
+      modalBody.innerHTML = '';
+
+      gameState[zoneId].forEach(card => {
+        const cardEl = createCardElement(card, true, zoneId, true);
+        cardEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const index = modalSelectedCardIds.indexOf(card.id);
+          if (index === -1) {
+            modalSelectedCardIds.push(card.id);
+            cardEl.classList.add('multi-selected');
+          } else {
+            modalSelectedCardIds.splice(index, 1);
+            cardEl.classList.remove('multi-selected');
+          }
+          confirmBtn.innerText = `選択した ${modalSelectedCardIds.length} 枚を手札へ`;
+        });
+        modalBody.appendChild(cardEl);
+      });
+
+      modal.style.display = 'flex';
+    }
+
+    function confirmModalSelection() {
+      if (modalSelectedCardIds.length === 0) return alert("手札へ送るカードを選択してください。");
+      addActionLog(`${modalSelectedCardIds.length} 枚のカードを手札へ移動しました`);
+      modalSelectedCardIds.forEach(id => moveCard(id, 'player-hand'));
+      modalSelectedCardIds = [];
+      closeModal();
+      renderBoard();
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+      modalSelectedCardIds = [];
+    }
+  </script>
+</body>
+</html>
