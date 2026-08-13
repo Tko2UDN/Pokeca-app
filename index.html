@@ -68,21 +68,15 @@
 
     .field { background: #14141f; border-radius: 10px; padding: 8px; border: 1px solid #333; display: flex; flex-direction: column; gap: 6px; position: relative; width: 100%; }
     
-    /* 相手フィールドの対面反転設定 */
+    /* 📱 スマホ視点（「相手の場」タップ時）: 180度回転で図1通りの対面UIを完璧に再現 */
     #opp-field.rotate-180 {
       transform: rotate(180deg);
-    }
-    
-    /* 相手フィールド内要素の並び順補正（バトル場・山札が手前側、ベンチが中、手札が奥） */
-    #opp-field.rotate-180 {
-      display: flex;
-      flex-direction: column-reverse;
     }
 
     .field-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
     .field-title { font-size: 14px; font-weight: bold; color: #f39c12; }
     
-    /* 3列レイアウト */
+    /* 🖥️ PC（全体表示）視点: 図2通りの正位置レイアウト */
     .field-grid { 
       display: grid; 
       grid-template-columns: 75px 1fr 75px; 
@@ -94,7 +88,7 @@
     .zone { background: rgba(255,255,255,0.03); border: 1.5px dashed #444; border-radius: 8px; padding: 4px; position: relative; }
     .zone-title { position: absolute; top: 2px; left: 4px; font-size: 9px; color: rgba(255,255,255,0.7); pointer-events: none; font-weight: bold; z-index: 5; }
 
-    /* 左列（サイド・特殊） */
+    /* 左列（サイド ＆ 特殊） */
     .left-stack-group {
       grid-column: 1;
       grid-row: 1;
@@ -103,7 +97,7 @@
       gap: 6px;
     }
 
-    /* 右列（山札・トラッシュ） */
+    /* 右列（山札 ＆ トラッシュ） */
     .right-stack-group { 
       grid-column: 3; 
       grid-row: 1; 
@@ -409,14 +403,14 @@
           </div>
         </div>
 
-        <!-- 中間：ベンチエリア -->
+        <!-- 下部：ベンチエリア -->
         <div class="bench-area-wrapper">
           <div class="bench-container" id="opp-bench-container"></div>
           <div class="bench2-container" id="opp-bench2-container"></div>
         </div>
       </div>
 
-      <!-- 奥側：手札 (相手) -->
+      <!-- 手札 (相手) -->
       <div class="zone hand-zone" id="opp-hand"><span class="zone-title">手札 (相手)</span></div>
     </div>
 
@@ -687,13 +681,13 @@
         pField.style.display = 'none';
         oField.style.display = 'flex';
         sWrapper.style.display = 'flex';
-        oField.classList.add('rotate-180');
+        oField.classList.add('rotate-180'); // スマホで「相手の場」を開いた時は回転適用
         document.getElementById('tab-opp').classList.add('active');
       } else {
         pField.style.display = 'flex';
         oField.style.display = 'flex';
         sWrapper.style.display = 'flex';
-        oField.classList.remove('rotate-180'); 
+        oField.classList.remove('rotate-180'); // 全体表示の時は回転解除
         document.getElementById('tab-both').classList.add('active');
       }
     }
