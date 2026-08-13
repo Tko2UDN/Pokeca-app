@@ -67,12 +67,16 @@
     .stadium-zone-wrapper { display: flex; justify-content: center; align-items: center; padding: 4px 0; border-top: 2px dashed #444; border-bottom: 2px dashed #444; }
 
     .field { background: #14141f; border-radius: 10px; padding: 8px; border: 1px solid #333; display: flex; flex-direction: column; gap: 6px; position: relative; width: 100%; }
+    
+    /* ★ 相手の場をに向かい合わせ（180度回転）にするためのCSS設定 */
+    #opp-field {
+      transform: rotate(180deg);
+    }
+
     .field-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
     .field-title { font-size: 14px; font-weight: bold; color: #f39c12; }
     
-    /* =========================================================
-       ★ 新画像（2026-08-13 162332）準拠の3列グリッド構成
-       ========================================================= */
+    /* 3列レイアウト（左:75px, 中央:1fr, 右:75px） */
     .field-grid { 
       display: grid; 
       grid-template-columns: 75px 1fr 75px; 
@@ -84,7 +88,7 @@
     .zone { background: rgba(255,255,255,0.03); border: 1.5px dashed #444; border-radius: 8px; padding: 4px; position: relative; }
     .zone-title { position: absolute; top: 2px; left: 4px; font-size: 9px; color: rgba(255,255,255,0.7); pointer-events: none; font-weight: bold; z-index: 5; }
 
-    /* 左列スタック（サイド・特殊） */
+    /* 左列（サイド・特殊） */
     .left-stack-group {
       grid-column: 1;
       grid-row: 1;
@@ -93,7 +97,7 @@
       gap: 6px;
     }
 
-    /* 右列スタック（山札・トラッシュ） */
+    /* 右列（山札・トラッシュ） */
     .right-stack-group { 
       grid-column: 3; 
       grid-row: 1; 
@@ -102,7 +106,6 @@
       gap: 6px; 
     }
 
-    /* タップしやすいコンパクトゾーン共通スタイル */
     .compact-stack-zone {
       background: rgba(255, 255, 255, 0.05);
       border: 1.5px solid #444;
@@ -120,7 +123,6 @@
     .compact-stack-zone.side-style { border-color: rgba(243, 156, 18, 0.5); background: rgba(243, 156, 18, 0.08); }
     .compact-stack-zone.special-style { border-color: #9b59b6; background: rgba(155, 89, 182, 0.1); }
 
-    /* 中央：バトル場（縦幅を拡大し 200px に変更） */
     .battle-zone-wrapper {
       grid-column: 2;
       grid-row: 1;
@@ -140,7 +142,6 @@
       width: 100%;
     }
 
-    /* 下部全幅エリア：ベンチ（画面横幅いっぱいに拡張） */
     .bench-area-wrapper {
       grid-column: 1 / span 3;
       grid-row: 2;
@@ -151,7 +152,6 @@
       margin-top: 4px;
     }
     
-    /* ベンチ枠（縦長 200px） */
     .bench-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
     .bench-slot { 
       min-height: 200px; 
@@ -166,7 +166,6 @@
       align-items: center; 
     }
     
-    /* ベンチ2（8枠切替え時） */
     .bench2-container { 
       display: none; 
       grid-template-columns: repeat(3, 1fr); 
@@ -365,7 +364,7 @@
   </div>
 
   <div id="board">
-    <!-- 相手の場 -->
+    <!-- 相手の場 (対面・180度回転表示) -->
     <div class="field" id="opp-field">
       <div class="field-header">
         <div class="field-title" id="opp-title">相手の場</div>
@@ -405,7 +404,7 @@
           </div>
         </div>
 
-        <!-- 下部：ベンチエリア（画面全幅化） -->
+        <!-- 下部：ベンチエリア -->
         <div class="bench-area-wrapper">
           <div class="bench-container" id="opp-bench-container"></div>
           <div class="bench2-container" id="opp-bench2-container"></div>
@@ -460,7 +459,7 @@
           </div>
         </div>
 
-        <!-- 中央：バトル場（高さを 200px に拡大） -->
+        <!-- 中央：バトル場 -->
         <div class="battle-zone-wrapper">
           <div class="zone battle-zone" id="player-battle">
             <span class="zone-title" style="left:4px;">バトル場</span>
@@ -482,7 +481,7 @@
           </div>
         </div>
 
-        <!-- 下部：ベンチエリア（画面全幅化） -->
+        <!-- 下部：ベンチエリア -->
         <div class="bench-area-wrapper">
           <div class="bench-container" id="player-bench-container"></div>
           <div class="bench2-container" id="player-bench2-container"></div>
@@ -1167,7 +1166,7 @@
 
       renderZone('stadium-zone', true);
 
-      // 各エリアの枚数表示の動的更新
+      // 枚数表示の動的更新
       document.getElementById('player-side-count').innerText = `${gameState['player-side'].length}枚`;
       document.getElementById('player-deck-count').innerText = `${gameState['player-deck'].length}枚`;
       document.getElementById('player-trash-count').innerText = `${gameState['player-trash'].length}枚`;
