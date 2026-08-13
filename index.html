@@ -30,12 +30,11 @@
     .btn-coin { background: #f39c12; color: #111; font-weight: bold; }
     .btn-coin:hover { background: #d35400; color: #fff; }
     
-    /* 入れ替えボタンの縦幅と存在感を拡大 */
     .btn-switch { 
       background: #e67e22; 
       font-size: 11px; 
       font-weight: bold; 
-      padding: 6px 8px; 
+      padding: 5px 8px; 
       margin-bottom: 4px; 
       border-radius: 4px;
       width: 90%;
@@ -71,10 +70,12 @@
     .field-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
     .field-title { font-size: 14px; font-weight: bold; color: #f39c12; }
     
-    /* 2枚目画像に合わせたグリッドレイアウト（左:80px, 右:105px, 中央のベンチは全幅展開） */
+    /* =========================================================
+       ★ 新画像（2026-08-13 162332）準拠の3列グリッド構成
+       ========================================================= */
     .field-grid { 
       display: grid; 
-      grid-template-columns: 80px 1fr 105px; 
+      grid-template-columns: 75px 1fr 75px; 
       gap: 6px; 
       align-items: start; 
       width: 100%; 
@@ -83,53 +84,31 @@
     .zone { background: rgba(255,255,255,0.03); border: 1.5px dashed #444; border-radius: 8px; padding: 4px; position: relative; }
     .zone-title { position: absolute; top: 2px; left: 4px; font-size: 9px; color: rgba(255,255,255,0.7); pointer-events: none; font-weight: bold; z-index: 5; }
 
-    /* サイドゾーン（高さはバトル場とピッタリ同期） */
-    .side-zone-compact {
+    /* 左列スタック（サイド・特殊） */
+    .left-stack-group {
       grid-column: 1;
       grid-row: 1;
-      background: rgba(243, 156, 18, 0.05);
-      border: 1.5px solid rgba(243, 156, 18, 0.4);
-      border-radius: 8px;
-      padding: 6px;
-      min-height: 165px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    /* バトル場（サイドの右側） */
-    .battle-zone-wrapper {
-      grid-column: 2;
-      grid-row: 1;
-    }
-
-    /* ベンチエリア（サイドの下の空きスペースまで左に広げて全幅化） */
-    .bench-area-wrapper {
-      grid-column: 1 / span 2;
-      grid-row: 2;
       display: flex;
       flex-direction: column;
       gap: 6px;
-      width: 100%;
     }
 
-    /* 右側のコンパクトスタック（山札・トラッシュ・特殊） */
+    /* 右列スタック（山札・トラッシュ） */
     .right-stack-group { 
       grid-column: 3; 
-      grid-row: 1 / span 2; 
+      grid-row: 1; 
       display: flex; 
       flex-direction: column; 
       gap: 6px; 
     }
-    
+
+    /* タップしやすいコンパクトゾーン共通スタイル */
     .compact-stack-zone {
       background: rgba(255, 255, 255, 0.05);
       border: 1.5px solid #444;
       border-radius: 8px;
-      padding: 6px;
-      min-height: 100px;
+      padding: 6px 2px;
+      min-height: 97px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -138,10 +117,17 @@
       cursor: pointer;
     }
     .compact-stack-zone:hover { background: rgba(255, 255, 255, 0.1); border-color: #666; }
+    .compact-stack-zone.side-style { border-color: rgba(243, 156, 18, 0.5); background: rgba(243, 156, 18, 0.08); }
     .compact-stack-zone.special-style { border-color: #9b59b6; background: rgba(155, 89, 182, 0.1); }
 
+    /* 中央：バトル場（縦幅を拡大し 200px に変更） */
+    .battle-zone-wrapper {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
     .battle-zone { 
-      min-height: 165px; 
+      min-height: 200px; 
       display: flex !important; 
       flex-direction: row !important; 
       align-items: center !important; 
@@ -152,6 +138,17 @@
       position: relative; 
       overflow-x: auto !important;
       width: 100%;
+    }
+
+    /* 下部全幅エリア：ベンチ（画面横幅いっぱいに拡張） */
+    .bench-area-wrapper {
+      grid-column: 1 / span 3;
+      grid-row: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      margin-top: 4px;
     }
     
     /* ベンチ枠（縦長 200px） */
@@ -207,8 +204,8 @@
     }
 
     .card-frame.battle-card {
-      width: 105px !important;
-      height: 145px !important;
+      width: 110px !important;
+      height: 152px !important;
       border-width: 2.5px !important;
     }
 
@@ -376,24 +373,25 @@
       <div class="zone hand-zone" id="opp-hand"><span class="zone-title">手札 (相手)</span></div>
       
       <div class="field-grid">
-        <!-- 相手のサイド（バトル場と高さを同期） -->
-        <div class="zone side-zone-compact" id="opp-side">
-          <span style="font-size:11px; font-weight:bold; color:#f39c12;">サイド</span>
-          <span style="font-size:16px; font-weight:bold; color:#fff;" id="opp-side-count">6枚</span>
+        <!-- 左列：サイド ＆ 特殊 -->
+        <div class="left-stack-group">
+          <div class="zone compact-stack-zone side-style" id="opp-side">
+            <span style="font-size:11px; font-weight:bold; color:#f39c12;">サイド</span>
+            <span style="font-size:14px; font-weight:bold; color:#fff;" id="opp-side-count">6枚</span>
+          </div>
+          <div class="zone compact-stack-zone special-style" id="opp-special">
+            <span style="font-size:11px; font-weight:bold; color:#e0b0ff;">特殊</span>
+            <span style="font-size:14px; font-weight:bold; color:#ffcc00;" id="opp-special-count">0枚</span>
+            <button class="btn-action" style="font-size:9px; padding:2px 6px; background:#8e44ad;" onclick="openModal('opp-special')">展開</button>
+          </div>
         </div>
         
-        <!-- バトル場 -->
+        <!-- 中央：バトル場 -->
         <div class="battle-zone-wrapper">
           <div class="zone battle-zone" id="opp-battle"><span class="zone-title">バトル場</span></div>
         </div>
 
-        <!-- ベンチエリア（サイド下の空き領域まで全幅化） -->
-        <div class="bench-area-wrapper">
-          <div class="bench-container" id="opp-bench-container"></div>
-          <div class="bench2-container" id="opp-bench2-container"></div>
-        </div>
-
-        <!-- 右端コンパクトスタック（山札・トラッシュ・特殊） -->
+        <!-- 右列：山札 ＆ トラッシュ -->
         <div class="right-stack-group">
           <div class="zone compact-stack-zone" id="opp-deck">
             <span style="font-size:11px; font-weight:bold; color:#aaa;">山札</span>
@@ -405,11 +403,12 @@
             <span style="font-size:14px; font-weight:bold; color:#ffcc00;" id="opp-trash-count">0枚</span>
             <button class="btn-action" style="font-size:9px; padding:2px 6px;" onclick="openModal('opp-trash')">展開</button>
           </div>
-          <div class="zone compact-stack-zone special-style" id="opp-special">
-            <span style="font-size:11px; font-weight:bold; color:#e0b0ff;">特殊</span>
-            <span style="font-size:14px; font-weight:bold; color:#ffcc00;" id="opp-special-count">0枚</span>
-            <button class="btn-action" style="font-size:9px; padding:2px 6px; background:#8e44ad;" onclick="openModal('opp-special')">展開</button>
-          </div>
+        </div>
+
+        <!-- 下部：ベンチエリア（画面全幅化） -->
+        <div class="bench-area-wrapper">
+          <div class="bench-container" id="opp-bench-container"></div>
+          <div class="bench2-container" id="opp-bench2-container"></div>
         </div>
       </div>
     </div>
@@ -447,14 +446,21 @@
       </div>
 
       <div class="field-grid">
-        <!-- 自分のサイド（バトル場と高さを同期） -->
-        <div class="zone side-zone-compact" id="player-side">
-          <span style="font-size:11px; font-weight:bold; color:#f39c12;">サイド</span>
-          <span style="font-size:16px; font-weight:bold; color:#fff;" id="player-side-count">6枚</span>
-          <button class="btn-action" style="font-size: 9px; padding: 3px 6px; margin-top: 4px;" onclick="openSideModal()">取得</button>
+        <!-- 左列：サイド ＆ 特殊 -->
+        <div class="left-stack-group">
+          <div class="zone compact-stack-zone side-style" id="player-side">
+            <span style="font-size:11px; font-weight:bold; color:#f39c12;">サイド</span>
+            <span style="font-size:14px; font-weight:bold; color:#fff;" id="player-side-count">6枚</span>
+            <button class="btn-action" style="font-size: 9px; padding: 2px 6px; margin-top: 2px;" onclick="openSideModal()">取得</button>
+          </div>
+          <div class="zone compact-stack-zone special-style" id="player-special">
+            <span style="font-size:11px; font-weight:bold; color:#e0b0ff;">特殊</span>
+            <span style="font-size:14px; font-weight:bold; color:#ffcc00;" id="player-special-count">0枚</span>
+            <button class="btn-action" style="font-size:9px; padding:2px 6px; background:#8e44ad;" onclick="openModal('player-special')">展開</button>
+          </div>
         </div>
 
-        <!-- バトル場 -->
+        <!-- 中央：バトル場（高さを 200px に拡大） -->
         <div class="battle-zone-wrapper">
           <div class="zone battle-zone" id="player-battle">
             <span class="zone-title" style="left:4px;">バトル場</span>
@@ -462,13 +468,7 @@
           </div>
         </div>
 
-        <!-- ベンチエリア（サイド下の空き領域まで左に全幅化） -->
-        <div class="bench-area-wrapper">
-          <div class="bench-container" id="player-bench-container"></div>
-          <div class="bench2-container" id="player-bench2-container"></div>
-        </div>
-
-        <!-- 右端コンパクトスタック（山札・トラッシュ・特殊） -->
+        <!-- 右列：山札 ＆ トラッシュ -->
         <div class="right-stack-group">
           <div class="zone compact-stack-zone" id="player-deck">
             <span style="font-size:11px; font-weight:bold; color:#aaa;">山札</span>
@@ -480,11 +480,12 @@
             <span style="font-size:14px; font-weight:bold; color:#ffcc00;" id="player-trash-count">0枚</span>
             <button class="btn-action" style="font-size:9px; padding:2px 6px;" onclick="openModal('player-trash')">展開</button>
           </div>
-          <div class="zone compact-stack-zone special-style" id="player-special">
-            <span style="font-size:11px; font-weight:bold; color:#e0b0ff;">特殊</span>
-            <span style="font-size:14px; font-weight:bold; color:#ffcc00;" id="player-special-count">0枚</span>
-            <button class="btn-action" style="font-size:9px; padding:2px 6px; background:#8e44ad;" onclick="openModal('player-special')">展開</button>
-          </div>
+        </div>
+
+        <!-- 下部：ベンチエリア（画面全幅化） -->
+        <div class="bench-area-wrapper">
+          <div class="bench-container" id="player-bench-container"></div>
+          <div class="bench2-container" id="player-bench2-container"></div>
         </div>
       </div>
 
@@ -1166,7 +1167,7 @@
 
       renderZone('stadium-zone', true);
 
-      // 左右コンパクトエリアの枚数表示自動更新
+      // 各エリアの枚数表示の動的更新
       document.getElementById('player-side-count').innerText = `${gameState['player-side'].length}枚`;
       document.getElementById('player-deck-count').innerText = `${gameState['player-deck'].length}枚`;
       document.getElementById('player-trash-count').innerText = `${gameState['player-trash'].length}枚`;
