@@ -68,8 +68,8 @@
 
     .field { background: #14141f; border-radius: 10px; padding: 8px; border: 1px solid #333; display: flex; flex-direction: column; gap: 6px; position: relative; width: 100%; }
     
-    /* ★ 相手の場をに向かい合わせ（180度回転）にするためのCSS設定 */
-    #opp-field {
+    /* 相手の場の回転設定（JS側で動的に rotate-180 クラスを制御） */
+    #opp-field.rotate-180 {
       transform: rotate(180deg);
     }
 
@@ -364,7 +364,7 @@
   </div>
 
   <div id="board">
-    <!-- 相手の場 (対面・180度回転表示) -->
+    <!-- 相手の場 -->
     <div class="field" id="opp-field">
       <div class="field-header">
         <div class="field-title" id="opp-title">相手の場</div>
@@ -661,6 +661,7 @@
       container.scrollTop = container.scrollHeight;
     }
 
+    // ★表示モード（「📱 相手の場」「🖥️ 全体表示」）に応じて回転を切り替える処理
     function switchMobileView(viewMode) {
       currentMobileView = viewMode;
       const pField = document.getElementById('player-field');
@@ -673,16 +674,20 @@
         pField.style.display = 'flex';
         oField.style.display = 'none';
         sWrapper.style.display = 'flex';
+        oField.classList.remove('rotate-180');
         document.getElementById('tab-player').classList.add('active');
       } else if (viewMode === 'opp') {
         pField.style.display = 'none';
         oField.style.display = 'flex';
         sWrapper.style.display = 'flex';
+        oField.classList.add('rotate-180'); // 相手のみ表示の時は対面180度回転
         document.getElementById('tab-opp').classList.add('active');
       } else {
+        /* 全体表示（PC風の縦並び）のときは回転を解除して読みやすく保持 */
         pField.style.display = 'flex';
         oField.style.display = 'flex';
         sWrapper.style.display = 'flex';
+        oField.classList.remove('rotate-180'); 
         document.getElementById('tab-both').classList.add('active');
       }
     }
