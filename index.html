@@ -58,26 +58,34 @@
     .field-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
     .field-title { font-size: 14px; font-weight: bold; color: #f39c12; }
     
-    /* =========================================================
-       ★ ご指定画像に合わせた3列レイアウト（サイド / メイン / コンパクト右スタック）
-       ========================================================= */
-    .field-grid { display: grid; grid-template-columns: 70px 1fr 110px; gap: 6px; align-items: start; width: 100%; }
+    /* 左右のスタック領域を絞り、ベンチ（中央）を最大幅化 */
+    .field-grid { display: grid; grid-template-columns: 80px 1fr 105px; gap: 6px; align-items: start; width: 100%; }
     
     .zone { background: rgba(255,255,255,0.03); border: 1.5px dashed #444; border-radius: 8px; padding: 4px; position: relative; }
     .zone-title { position: absolute; top: 2px; left: 4px; font-size: 9px; color: rgba(255,255,255,0.7); pointer-events: none; font-weight: bold; z-index: 5; }
 
-    /* サイドゾーン (左端) */
-    .side-zone { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 2px; min-height: 310px; align-items: center; }
-    .side-zone .card-frame { width: 60px !important; height: 82px !important; margin-top: -55px; }
-    .side-zone .card-frame:first-of-type { margin-top: 24px; }
+    /* コンパクト化したサイドゾーン */
+    .side-zone-compact {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      background: rgba(243, 156, 18, 0.05);
+      border: 1.5px solid rgba(243, 156, 18, 0.4);
+      border-radius: 8px;
+      padding: 6px;
+      min-height: 310px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
 
-    /* メイン（バトル場 ＆ ベンチ 1・2） (中央エリア) */
+    /* メイン（バトル場 ＆ ベンチ） */
     .main-battle-bench { grid-column: 2; display: flex; flex-direction: column; gap: 8px; }
 
-    /* 右側のコンパクトスタック（山札・トラッシュ・特殊） (右端) */
+    /* 右側のコンパクトスタック（山札・トラッシュ・特殊） */
     .right-stack-group { grid-column: 3; display: flex; flex-direction: column; gap: 6px; }
     
-    /* カードの枠UIを無くした文字＋ボタンだけのコンパクトゾーン */
     .compact-stack-zone {
       background: rgba(255, 255, 255, 0.05);
       border: 1.5px solid #444;
@@ -95,7 +103,7 @@
     .compact-stack-zone.special-style { border-color: #9b59b6; background: rgba(155, 89, 182, 0.1); }
 
     .battle-zone { 
-      min-height: 160px; 
+      min-height: 165px; 
       display: flex !important; 
       flex-direction: row !important; 
       align-items: center !important; 
@@ -107,13 +115,24 @@
       overflow-x: auto !important;
     }
     
-    /* ベンチエリア（5枠） */
+    /* ベンチ枠の縦長化 (160px ➔ 200px へ拡張して2枚目以降を置きやすく改善) */
     .bench-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
-    .bench-slot { min-height: 160px; background: rgba(52, 152, 219, 0.05); border: 1.5px dashed rgba(52, 152, 219, 0.3); border-radius: 8px; padding: 4px; padding-top: 22px; position: relative; display: flex; flex-direction: column; align-items: center; }
+    .bench-slot { 
+      min-height: 200px; 
+      background: rgba(52, 152, 219, 0.05); 
+      border: 1.5px dashed rgba(52, 152, 219, 0.3); 
+      border-radius: 8px; 
+      padding: 4px; 
+      padding-top: 22px; 
+      position: relative; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+    }
     
-    /* ベンチ2（8枠化の際に増える追加の3枠エリア） */
+    /* ベンチ2（8枠切替え時の追加エリア） */
     .bench2-container { 
-      display: none; /* 通常時は非表示 */
+      display: none; 
       grid-template-columns: repeat(3, 1fr); 
       gap: 6px; 
       width: 100%; 
@@ -123,9 +142,9 @@
       border: 1.5px dashed rgba(155, 89, 182, 0.3);
       border-radius: 8px;
     }
-    .bench2-container.show { display: grid; } /* 8枠有効化で表示 */
+    .bench2-container.show { display: grid; }
 
-    .hand-zone { background: rgba(155, 89, 182, 0.08); border: 1.5px solid rgba(155, 89, 182, 0.4); border-radius: 8px; padding: 8px; min-height: 150px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; position: relative; width: 100%; margin-top: 6px; }
+    .hand-zone { background: rgba(155, 89, 182, 0.08); border: 1.5px solid rgba(155, 89, 182, 0.4); border-radius: 8px; padding: 8px; min-height: 155px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; position: relative; width: 100%; margin-top: 6px; }
 
     @media (min-aspect-ratio: 1/1) and (min-width: 900px) {
       #board { flex-direction: row; align-items: stretch; }
@@ -162,7 +181,7 @@
 
     .card-frame.rotated-90 { transform: rotate(90deg); margin: 0 12px; }
 
-    .bench-slot .stacked-card { margin-top: -95px !important; position: relative; }
+    .bench-slot .stacked-card { margin-top: -90px !important; position: relative; }
     .bench-slot .stacked-card:first-child { margin-top: 0 !important; }
 
     .battle-zone .stacked-card { 
@@ -311,6 +330,7 @@
   </div>
 
   <div id="board">
+    <!-- 相手の場 -->
     <div class="field" id="opp-field">
       <div class="field-header">
         <div class="field-title" id="opp-title">相手の場</div>
@@ -318,7 +338,11 @@
       <div class="zone hand-zone" id="opp-hand"><span class="zone-title">手札 (相手)</span></div>
       
       <div class="field-grid">
-        <div class="zone side-zone" id="opp-side"><span class="zone-title">サイド (6)</span></div>
+        <!-- 相手のサイド (コンパクト表示) -->
+        <div class="zone side-zone-compact" id="opp-side">
+          <span style="font-size:11px; font-weight:bold; color:#f39c12;">サイド</span>
+          <span style="font-size:16px; font-weight:bold; color:#fff;" id="opp-side-count">6枚</span>
+        </div>
         
         <div class="main-battle-bench">
           <div class="zone battle-zone" id="opp-battle"><span class="zone-title">バトル場</span></div>
@@ -352,6 +376,7 @@
       </div>
     </div>
 
+    <!-- 自分の場 -->
     <div class="field" id="player-field">
       <div class="field-header">
         <div class="field-title" id="player-title">自分の場</div>
@@ -378,24 +403,24 @@
       </div>
 
       <div class="field-grid">
-        <!-- 左端：サイド -->
-        <div class="zone side-zone" id="player-side">
-          <span class="zone-title">サイド (6)</span>
-          <button class="btn-action" style="font-size: 9px; padding: 2px 4px; margin-top: 14px; z-index: 10;" onclick="openSideModal()">サイドを取る</button>
+        <!-- 自分のサイド (コンパクト表示) -->
+        <div class="zone side-zone-compact" id="player-side">
+          <span style="font-size:11px; font-weight:bold; color:#f39c12;">サイド</span>
+          <span style="font-size:16px; font-weight:bold; color:#fff;" id="player-side-count">6枚</span>
+          <button class="btn-action" style="font-size: 9px; padding: 3px 6px; margin-top: 6px;" onclick="openSideModal()">取得</button>
         </div>
 
-        <!-- 中央：バトル場 ➔ ベンチ1 ➔ ベンチ2（8枠切替え時） -->
+        <!-- 中央：バトル場 ➔ ベンチ1 (5枠) ➔ ベンチ2 (3枠) -->
         <div class="main-battle-bench">
           <div class="zone battle-zone" id="player-battle">
             <span class="zone-title" style="left:4px;">バトル場</span>
             <button class="btn-danger" style="position: absolute; top: 2px; left: 45px; z-index: 10;" onclick="trashEntireBattleZone()">全トラッシュ</button>
           </div>
           <div class="bench-container" id="player-bench-container"></div>
-          <!-- 8枠の時に画像のようにベンチ下に展開される「ベンチ2（3枠）」 -->
           <div class="bench2-container" id="player-bench2-container"></div>
         </div>
 
-        <!-- 右端：山札・トラッシュ・特殊の文字コンパクト表示 -->
+        <!-- 右端：山札・トラッシュ・特殊のコンパクト表示 -->
         <div class="right-stack-group">
           <div class="zone compact-stack-zone" id="player-deck">
             <span style="font-size:11px; font-weight:bold; color:#aaa;">山札</span>
@@ -524,9 +549,7 @@
       window.onclick = function(e) {
         if (!e.target.matches('.btn-special')) {
           const dropdowns = document.getElementsByClassName("dropdown");
-          for (let i = 0; i < dropdowns.length; i++) {
-            dropdowns[i].classList.remove('show');
-          }
+          for (let i = 0; i < dropdowns.length; i++) dropdowns[i].classList.remove('show');
         }
       }
     });
@@ -659,7 +682,6 @@
       renderBoard();
     }
 
-    /* ベンチ枠の動的生成 (ベンチ1: 5枠 / ベンチ2: 追加3枠) */
     function initBenchSlots() {
       ['player', 'opp'].forEach(target => {
         const container1 = document.getElementById(`${target}-bench-container`);
@@ -667,12 +689,10 @@
         container1.innerHTML = '';
         container2.innerHTML = '';
 
-        // メイン5枠
         for (let i = 1; i <= 5; i++) {
           container1.appendChild(createBenchSlotElement(target, i));
         }
 
-        // 8枠モード時の追加3枠（ベンチ2）
         if (isBenchExpanded) {
           container2.classList.add('show');
           for (let i = 6; i <= 8; i++) {
@@ -1084,13 +1104,10 @@
 
     function renderBoard(shouldSync = true) {
       renderZone('player-hand', true);
-      renderZone('player-side', false, true);
       renderZone('player-battle', true);
       
       const isOppHandFaceUp = gameState['opp-hand'].length > 0 && gameState['opp-hand'][0].cardType !== '裏面';
       renderZone('opp-hand', isOppHandFaceUp, !isOppHandFaceUp);
-      
-      renderZone('opp-side', false, true);
       renderZone('opp-battle', true);
 
       const count = isBenchExpanded ? 8 : 5;
@@ -1101,11 +1118,13 @@
 
       renderZone('stadium-zone', true);
 
-      // 右端コンパクトエリアの枚数自動更新
+      // 左右コンパクトエリア（サイド・山札・トラッシュ・特殊）の枚数自動更新
+      document.getElementById('player-side-count').innerText = `${gameState['player-side'].length}枚`;
       document.getElementById('player-deck-count').innerText = `${gameState['player-deck'].length}枚`;
       document.getElementById('player-trash-count').innerText = `${gameState['player-trash'].length}枚`;
       document.getElementById('player-special-count').innerText = `${gameState['player-special'].length}枚`;
       
+      document.getElementById('opp-side-count').innerText = `${gameState['opp-side'].length}枚`;
       document.getElementById('opp-deck-count').innerText = `${gameState['opp-deck'].length}枚`;
       document.getElementById('opp-trash-count').innerText = `${gameState['opp-trash'].length}枚`;
       document.getElementById('opp-special-count').innerText = `${gameState['opp-special'].length}枚`;
@@ -1171,17 +1190,15 @@
       else if (zoneId.includes('bench')) {
         const match = zoneId.match(/\d+/);
         baseTitle = `ベンチ${match ? match[0] : ''}`;
-      } else if (zoneId.includes('side')) baseTitle = "サイド (6)";
+      }
 
       const hpTitleInfo = (topPokemon && topPokemon.hp && topPokemon.hp !== "-") ? ` [HP: ${topPokemon.hp}]` : "";
 
       const switchBtn = zoneEl.querySelector('.btn-switch');
-      const sideBtn = zoneEl.querySelector('button.btn-action');
       const trashAllBtn = zoneEl.querySelector('button.btn-danger');
 
       zoneEl.innerHTML = `<span class="zone-title">${baseTitle}${hpTitleInfo}</span>`;
       if (switchBtn) zoneEl.appendChild(switchBtn);
-      if (sideBtn && zoneId === 'player-side') zoneEl.appendChild(sideBtn);
       if (trashAllBtn && zoneId === 'player-battle') zoneEl.appendChild(trashAllBtn);
 
       if (zoneId.startsWith('player-') && (zoneId.includes('battle') || zoneId.includes('bench'))) {
